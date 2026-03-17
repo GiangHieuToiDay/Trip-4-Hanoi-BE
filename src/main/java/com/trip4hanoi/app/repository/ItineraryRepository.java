@@ -1,0 +1,14 @@
+package com.trip4hanoi.app.repository;
+
+import com.trip4hanoi.app.entity.Itinerary;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+import java.util.Optional;
+
+@Repository
+public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
+    List<Itinerary> findByUserId(Long userId);
+    Optional<Itinerary> findByUserIdAndTitleIgnoreCase(Long userId, String title);
+}
