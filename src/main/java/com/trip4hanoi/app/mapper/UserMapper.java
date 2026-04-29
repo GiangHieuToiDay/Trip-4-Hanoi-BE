@@ -2,18 +2,9 @@ package com.trip4hanoi.app.mapper;
 
 import com.trip4hanoi.app.dto.res.UserResponse;
 import com.trip4hanoi.app.entity.User;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class UserMapper {
-    public UserResponse toUserResponse(User user) {
-        if (user == null) return null;
-        return UserResponse.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .nationality(user.getNationality())
-                .language(user.getLanguage())
-                .build();
-    }
+@Mapper(componentModel = "spring")
+public interface UserMapper {
+    UserResponse toUserResponse(User user);
 }

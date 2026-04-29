@@ -14,38 +14,59 @@ import java.util.List;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // ID người dùng
 
     @Column(nullable = false)
-    private String name;
+    private String name; // Tên hiển thị
 
     @Column(nullable = false, unique = true)
-    private String email;
+    private String email; // Email đăng nhập
 
     @Column(nullable = false)
-    private String password;
+    private String password; // Mật khẩu (đã mã hóa)
 
-    private String nationality;
+    @Enumerated(EnumType.STRING)
+    private Role role; // Quyền: USER / ADMIN
 
-    private String language;
+    @Column(name = "google_id")
+    private String googleId; // ID đăng nhập bằng Google
+
+    private String nationality; // Quốc tịch
+
+    private String language; // Ngôn ngữ ưu tiên
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt; // Ngày tạo tài khoản
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<UserPreference> userPreferences;
+    private List<UserPreference> userPreferences; // Danh sách sở thích của user
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Itinerary> itineraries;
+    private List<Itinerary> itineraries; // Các lịch trình đã tạo
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Review> reviews;
+    private List<Review> reviews; // Các đánh giá đã viết
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<UserEventFollow> userEventFollows;
+    private List<UserEventFollow> userEventFollows; // Các sự kiện đang theo dõi
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Notification> notifications;
+    private List<Notification> notifications; // Danh sách thông báo
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Post> posts; // Các bài đăng của user
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Comment> comments; // Các comment của user trên bài đăng
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<SavedPlace> savedPlaces; // Các địa điểm đã lưu (bookmark)
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<PostLike> postLikes; // Các lượt like bài viết của user
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<PostSave> postSaves; // Các bài viết user đã lưu
 
     @PrePersist
     protected void onCreate() {

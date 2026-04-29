@@ -1,31 +1,18 @@
 package com.trip4hanoi.app.mapper;
 
-import com.trip4hanoi.app.dto.req.ItineraryPlaceRequest;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.entity.ItineraryPlace;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class ItineraryPlaceMapper {
-    public ItineraryPlaceResponse toItineraryPlaceResponse(ItineraryPlace itineraryPlace) {
-        if (itineraryPlace == null) return null;
-        return ItineraryPlaceResponse.builder()
-                .id(itineraryPlace.getId())
-                .placeId(itineraryPlace.getPlace() != null ? itineraryPlace.getPlace().getId() : null)
-                .placeName(itineraryPlace.getPlace() != null ? itineraryPlace.getPlace().getName() : null)
-                .dayNumber(itineraryPlace.getDayNumber())
-                .orderIndex(itineraryPlace.getOrderIndex())
-                .session(itineraryPlace.getSession())
-                .estimatedCost(itineraryPlace.getEstimatedCost())
-                .build();
-    }
+@Mapper(componentModel = "spring")
+public interface ItineraryPlaceMapper {
 
-    public ItineraryPlace toItineraryPlaceEntity(ItineraryPlaceRequest request) {
-        if (request == null) return null;
-        return ItineraryPlace.builder()
-                .dayNumber(request.getDayNumber())
-                .orderIndex(request.getOrderIndex())
-                .estimatedCost(request.getEstimatedCost())
-                .build();
-    }
+    @Mapping(source = "place.id", target = "placeId")
+    @Mapping(source = "place.name", target = "placeName")
+    @Mapping(source = "place.imageUrl", target = "imageUrl")
+    @Mapping(source = "place.latitude", target = "latitude")
+    @Mapping(source = "place.longitude", target = "longitude")
+    @Mapping(source = "place.address", target = "address")
+    ItineraryPlaceResponse toItineraryPlaceResponse(ItineraryPlace itineraryPlace);
 }
