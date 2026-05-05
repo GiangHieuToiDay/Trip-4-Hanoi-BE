@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.mapper;
 
+import com.trip4hanoi.app.dto.req.ItineraryPlaceRequest;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.entity.ItineraryPlace;
 import org.mapstruct.Mapper;
@@ -15,4 +16,6 @@ public interface ItineraryPlaceMapper {
     @Mapping(source = "place.longitude", target = "longitude")
     @Mapping(source = "place.address", target = "address")
     ItineraryPlaceResponse toItineraryPlaceResponse(ItineraryPlace itineraryPlace);
+    ItineraryPlace toItineraryPlaceEntity (ItineraryPlaceRequest request);
+
 }

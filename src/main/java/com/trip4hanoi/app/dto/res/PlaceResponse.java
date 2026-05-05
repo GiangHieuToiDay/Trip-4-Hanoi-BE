@@ -21,4 +21,9 @@ public class PlaceResponse {
     private Integer viewCount;
     private Integer favoriteCount;
     private String imageUrl;
+
+
+    private Double distance;// khoảng cách giữa các điểm -  Tính bằng km
+    private Boolean isRecommended;//  [TODO: USER_AUTH] Đánh dấu dựa trên sở thích
+    private Boolean hasActiveEvent;
 }

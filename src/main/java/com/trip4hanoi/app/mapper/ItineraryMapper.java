@@ -16,5 +16,5 @@ public interface ItineraryMapper {
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "itineraryPlaces", ignore = true)
-    Itinerary toItinerary(ItineraryRequest request);
+    Itinerary toItineraryEntity(ItineraryRequest request);
 }

@@ -10,6 +10,12 @@ public class ItineraryPlaceResponse {
     private Long id;
     private Long placeId;
     private String placeName;
+    //them
+    private String imageUrl;
+    private Double latitude;
+    private Double longitude;
+    private String address;
+
     private Integer dayNumber;
     private Integer orderIndex;
     private String session;

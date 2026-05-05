@@ -15,5 +15,6 @@ public class PlaceRequest {
     private Double latitude;
     private Double longitude;
     private Integer priceAvg;
+    private Double ratingAvg;
     private String imageUrl;
 }

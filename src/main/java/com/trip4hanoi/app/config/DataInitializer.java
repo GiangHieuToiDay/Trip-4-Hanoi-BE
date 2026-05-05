@@ -1,118 +1,6 @@
-// package com.trip4hanoi.app.config;
-
-// import com.trip4hanoi.app.entity.Category;
-// import com.trip4hanoi.app.entity.Place;
-// import com.trip4hanoi.app.entity.User;
-// import com.trip4hanoi.app.entity.UserPreference;
-// import com.trip4hanoi.app.repository.CategoryRepository;
-// import com.trip4hanoi.app.repository.PlaceRepository;
-// import com.trip4hanoi.app.repository.UserPreferenceRepository;
-// import com.trip4hanoi.app.repository.UserRepository;
-// import lombok.RequiredArgsConstructor;
-// import org.springframework.boot.CommandLineRunner;
-// import org.springframework.stereotype.Component;
-// import org.springframework.transaction.annotation.Transactional;
-
-// import java.util.ArrayList;
-// import java.util.List;
-// import java.util.Random;
-
-// @Component
-// @RequiredArgsConstructor
-// public class DataInitializer implements CommandLineRunner {
-
-//     private final PlaceRepository placeRepository;
-//     private final CategoryRepository categoryRepository;
-//     private final UserRepository userRepository;
-//     private final UserPreferenceRepository userPreferenceRepository;
-//     private final Random random = new Random();
-
-//     @Override
-//     @Transactional
-//     public void run(String... args) throws Exception {
-//         // Nạp Category nếu chưa có
-//         if (categoryRepository.count() < 7) {
-//             Category food = getOrCreateCategory("Ẩm thực");
-//             Category cafe = getOrCreateCategory("Cafe");
-//             Category cinema = getOrCreateCategory("Rạp chiếu phim");
-//             Category travel = getOrCreateCategory("Địa điểm du lịch");
-//             Category workshop = getOrCreateCategory("Workshop");
-//             Category photobooth = getOrCreateCategory("Photobooth");
-//             Category homestay = getOrCreateCategory("Homestay");
-
-//             // Nạp 200 địa điểm
-//             List<Place> allPlaces = new ArrayList<>();
-//             allPlaces.addAll(generatePlaces("Quán ăn", food, 30, List.of("Phở", "Bún chả", "Bún đậu", "Chả cá"), 50000, 200000));
-//             allPlaces.addAll(generatePlaces("Cafe", cafe, 30, List.of("Aha Coffee", "Highlands", "Cộng Cà Phê", "The Coffee House"), 30000, 80000));
-//             allPlaces.addAll(generatePlaces("Rạp", cinema, 30, List.of("CGV Cinema", "Lotte Cinema", "BHD Star"), 80000, 150000));
-//             allPlaces.addAll(generatePlaces("Điểm du lịch", travel, 30, List.of("Công viên", "Bảo tàng", "Hồ", "Di tích"), 0, 50000));
-//             allPlaces.addAll(generatePlaces("Workshop", workshop, 20, List.of("Làm gốm", "Vẽ tranh", "Làm nến thơm"), 150000, 500000));
-//             allPlaces.addAll(generatePlaces("Photobooth", photobooth, 30, List.of("Life4Cut", "PhotoTime", "Haru Film"), 50000, 120000));
-//             allPlaces.addAll(generatePlaces("Homestay", homestay, 30, List.of("Hanoi Cozy", "Old Quarter Home", "Lakeside View"), 400000, 1500000));
-//             placeRepository.saveAll(allPlaces);
-//             System.out.println(">>> ĐÃ NẠP THÀNH CÔNG 200 ĐỊA ĐIỂM!");
-//         }
-
-//         // Nạp 2 User mẫu nếu chưa có
-//         if (userRepository.count() == 0) {
-//             User user1 = userRepository.save(User.builder()
-//                     .name("Hải Nam")
-//                     .email("hainam@gmail.com")
-//                     .password("123456") // Lưu ý: Nếu có Security thì nên dùng BCrypt
-//                     .nationality("Vietnam")
-//                     .language("vi")
-//                     .build());
-
-//             User user2 = userRepository.save(User.builder()
-//                     .name("John Doe")
-//                     .email("johndoe@gmail.com")
-//                     .password("123456")
-//                     .nationality("USA")
-//                     .language("en")
-//                     .build());
-
-//             // Nạp thêm sở thích cho User để AI biết đường tư vấn
-//             Category cafeCat = categoryRepository.findByName("Cafe").orElse(null);
-//             Category travelCat = categoryRepository.findByName("Địa điểm du lịch").orElse(null);
-            
-//             if (cafeCat != null) {
-//                 userPreferenceRepository.save(UserPreference.builder().user(user1).category(cafeCat).build());
-//             }
-//             if (travelCat != null) {
-//                 userPreferenceRepository.save(UserPreference.builder().user(user2).category(travelCat).build());
-//             }
-
-//             System.out.println(">>> ĐÃ NẠP THÀNH CÔNG 2 USER MẪU!");
-//         }
-//     }
-
-//     private Category getOrCreateCategory(String name) {
-//         return categoryRepository.findByName(name)
-//                 .orElseGet(() -> categoryRepository.save(Category.builder().name(name).build()));
-//     }
-
-//     private List<Place> generatePlaces(String prefix, Category category, int count, List<String> samples, int minPrice, int maxPrice) {
-//         List<Place> list = new ArrayList<>();
-//         String[] districts = {"Hoàn Kiếm", "Ba Đình", "Tây Hồ", "Đống Đa", "Cầu Giấy", "Hai Bà Trưng"};
-//         for (int i = 1; i <= count; i++) {
-//             String baseName = samples.get(random.nextInt(samples.size()));
-//             String district = districts[random.nextInt(districts.length)];
-//             list.add(Place.builder()
-//                     .name(baseName + " " + prefix + " " + i)
-//                     .description("Địa điểm tuyệt vời tại " + district + " để trải nghiệm " + category.getName().toLowerCase() + ".")
-//                     .address("Số " + (i * 3) + " Đường " + district + ", Hà Nội")
-//                     .priceAvg(minPrice + random.nextInt(maxPrice - minPrice + 1))
-//                     .ratingAvg(3.5 + (5.0 - 3.5) * random.nextDouble())
-//                     .category(category)
-//                     .build());
-//         }
-//         return list;
-//     }
-// }
-
-
 package com.trip4hanoi.app.config;
 
+import com.trip4hanoi.app.common.AuthProvider;
 import com.trip4hanoi.app.entity.Category;
 import com.trip4hanoi.app.entity.Place;
 import com.trip4hanoi.app.entity.User;
@@ -161,7 +49,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Bún mọc Hàng Lược","Nem rán Hàng Bồ","Ốc luộc Hàng Chai","Lẩu Phan","Hotpot Story",
                 "King BBQ","Sumo BBQ","Kichi Kichi","Sen Tây Hồ","Poseidon Buffet","Quán ăn Ngon"
         };
-        addPlaces(all, foods, "Quán ăn nổi tiếng", 50000, 4.5, food);
+        addPlaces(all, foods, "Trải nghiệm ẩm thực truyền thống Hà Nội", 60000, 4.5, food);
 
         // ===== CAFE (30) =====
         String[] cafes = {
@@ -172,7 +60,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Hanoi Social Club","Manzi","Maison de Tet","Cup of Tea","Rustics Coffee",
                 "Cafe Giảng","Cafe Đinh","Hidden Gem","Timeline Coffee","Tiny Cafe"
         };
-        addPlaces(all, cafes, "Quán cafe đẹp", 40000, 4.4, cafe);
+        addPlaces(all, cafes, "Không gian cafe cực chill tại Hà Thành", 45000, 4.4, cafe);
 
         // ===== WORKSHOP (20) =====
         String[] workshops = {
@@ -183,7 +71,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Workshop cắm hoa","Workshop xà phòng","Workshop thư pháp",
                 "Workshop handmade","Workshop resin"
         };
-        addPlaces(all, workshops, "Workshop trải nghiệm", 250000, 4.6, workshop);
+        addPlaces(all, workshops, "Workshop trải nghiệm sáng tạo", 300000, 4.6, workshop);
 
         // ===== MUSEUM (10) =====
         String[] museums = {
@@ -191,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Bảo tàng Mỹ thuật","Bảo tàng Phụ nữ","Bảo tàng Hà Nội",
                 "Bảo tàng Quân đội","Bảo tàng Công an","Bảo tàng B52","Bảo tàng Địa chất"
         };
-        addPlaces(all, museums, "Bảo tàng", 30000, 4.7, travel);
+        addPlaces(all, museums, "Tìm hiểu lịch sử và văn hóa", 40000, 4.7, travel);
 
         // ===== HISTORICAL (10) =====
         String[] historical = {
@@ -199,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Chùa Trấn Quốc","Đền Ngọc Sơn","Đền Quán Thánh","Phủ Tây Hồ",
                 "Cột cờ Hà Nội","Nhà thờ Lớn"
         };
-        addPlaces(all, historical, "Di tích lịch sử", 30000, 4.8, travel);
+        addPlaces(all, historical, "Di tích lịch sử nghìn năm văn hiến", 30000, 4.8, travel);
 
         // ===== CINEMA (15) =====
         String[] cinemas = {
@@ -208,7 +96,7 @@ public class DataInitializer implements CommandLineRunner {
                 "BHD Vincom","Galaxy Mipec","Beta Mỹ Đình",
                 "Beta Thanh Xuân","Cinestar","Mega GS","Platinum","National Cinema"
         };
-        addPlaces(all, cinemas, "Rạp chiếu phim", 100000, 4.5, cinema);
+        addPlaces(all, cinemas, "Giải trí đỉnh cao với những bộ phim bom tấn", 120000, 4.5, cinema);
 
         placeRepository.saveAll(all);
 
@@ -220,6 +108,7 @@ public class DataInitializer implements CommandLineRunner {
                     .email("hainam@gmail.com")
                     .password("123456")
                     .nationality("Vietnam")
+                    .provider(AuthProvider.LOCAL)
                     .language("vi")
                     .build());
 
@@ -228,30 +117,17 @@ public class DataInitializer implements CommandLineRunner {
                     .email("johndoe@gmail.com")
                     .password("123456")
                     .nationality("USA")
+                    .provider(AuthProvider.LOCAL)
                     .language("en")
                     .build());
 
             // User 1 thích cafe + ăn uống
-            userPreferenceRepository.save(UserPreference.builder()
-                    .user(user1)
-                    .category(cafe)
-                    .build());
-
-            userPreferenceRepository.save(UserPreference.builder()
-                    .user(user1)
-                    .category(food)
-                    .build());
+            userPreferenceRepository.save(UserPreference.builder().user(user1).category(cafe).build());
+            userPreferenceRepository.save(UserPreference.builder().user(user1).category(food).build());
 
             // User 2 thích du lịch + workshop
-            userPreferenceRepository.save(UserPreference.builder()
-                    .user(user2)
-                    .category(travel)
-                    .build());
-
-            userPreferenceRepository.save(UserPreference.builder()
-                    .user(user2)
-                    .category(workshop)
-                    .build());
+            userPreferenceRepository.save(UserPreference.builder().user(user2).category(travel).build());
+            userPreferenceRepository.save(UserPreference.builder().user(user2).category(workshop).build());
         }
 
         System.out.println(">>> LOAD FULL DATA + USER + PREFERENCES SUCCESS!");
@@ -269,12 +145,46 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private Place place(String name, String desc, String address, int price, double rate, Category c) {
+        // Tọa độ gốc mặc định (Hoàn Kiếm)
+        double lat = 21.0285;
+        double lng = 105.8527;
+        String district = "Hoàn Kiếm";
+
+        // Logic gán Quận và Tọa độ theo từ khóa thông minh
+        if (name.contains("Tây Hồ") || name.contains("Trấn Quốc") || name.contains("Phủ Tây Hồ")) {
+            lat = 21.0664; lng = 105.8277; district = "Tây Hồ";
+        } else if (name.contains("Cầu Giấy") || name.contains("Dân tộc học") || name.contains("BHD Vincom")) {
+            lat = 21.0362; lng = 105.7905; district = "Cầu Giấy";
+        } else if (name.contains("Ba Đình") || name.contains("Liễu Giai") || name.contains("Lotte") || name.contains("Hồ Chí Minh") || name.contains("Một Cột") || name.contains("Quân đội")) {
+            lat = 21.0358; lng = 105.8335; district = "Ba Đình";
+        } else if (name.contains("Thanh Xuân") || name.contains("Royal City")) {
+            lat = 21.0028; lng = 105.7951; district = "Thanh Xuân";
+        } else if (name.contains("Đống Đa") || name.contains("Văn Miếu") || name.contains("Hàng Cháo") || name.contains("Phạm Ngọc Thạch")) {
+            lat = 21.0294; lng = 105.8361; district = "Đống Đa";
+        } else if (name.contains("Hai Bà Trưng") || name.contains("Bà Triệu") || name.contains("Times City") || name.contains("Tràng Tiền")) {
+            lat = 21.0125; lng = 105.8494; district = "Hai Bà Trưng";
+        }
+
+        // Thêm độ lệch ngẫu nhiên nhỏ (trong khoảng +/- 500m) để các điểm không bị trùng khít
+        lat += (Math.random() * 0.01 - 0.005);
+        lng += (Math.random() * 0.01 - 0.005);
+
+        // Tạo ảnh giả lập dựa trên tên để mỗi địa điểm có ảnh riêng
+        String imageSeed = name.replaceAll("\\s+", "");
+        String imageUrl = "https://picsum.photos/seed/" + imageSeed + "/800/600";
+
         return Place.builder()
                 .name(name)
                 .description(desc)
-                .address(address)
+                .address(address + ", " + district)
+                .district(district)
+                .latitude(lat)
+                .longitude(lng)
                 .priceAvg(price)
                 .ratingAvg(rate)
+                .viewCount((int) (Math.random() * 1000)) // Giả lập lượt xem từ 0-1000
+                .favoriteCount((int) (Math.random() * 200)) // Giả lập yêu thích từ 0-200
+                .imageUrl(imageUrl)
                 .category(c)
                 .build();
     }

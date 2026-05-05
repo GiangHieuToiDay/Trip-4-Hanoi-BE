@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: Trip4HaNoi-BE
+  
+  profiles:
+    active: "@spring.profiles.active@"
+
+# Cấu hình chung cho tất cả các môi trường
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+logging:
+  level:
+    root: info
+    web: info
+    com.trip4hanoi.app: debug

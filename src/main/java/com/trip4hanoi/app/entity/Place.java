@@ -29,8 +29,10 @@ public class Place {
 
     private String district; // Quận/Huyện
 
+    @Column(nullable = false)
     private Double latitude; // Vĩ độ
 
+    @Column(nullable = false)
     private Double longitude; // Kinh độ
 
     @Column(name = "price_avg")

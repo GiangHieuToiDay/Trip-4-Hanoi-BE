@@ -4,6 +4,7 @@ import com.trip4hanoi.app.dto.req.EventFollowRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.EventResponse;
 import com.trip4hanoi.app.service.EventService;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
