@@ -16,6 +16,10 @@ public interface ItineraryPlaceMapper {
     @Mapping(source = "place.longitude", target = "longitude")
     @Mapping(source = "place.address", target = "address")
     ItineraryPlaceResponse toItineraryPlaceResponse(ItineraryPlace itineraryPlace);
-    ItineraryPlace toItineraryPlaceEntity (ItineraryPlaceRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "itinerary", ignore = true)
+    @Mapping(target = "place", ignore = true)
+    @Mapping(target = "session", ignore = true)
+    ItineraryPlace toItineraryPlace(ItineraryPlaceRequest request);
 }

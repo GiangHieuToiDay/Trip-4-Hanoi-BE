@@ -1,7 +1,9 @@
 package com.trip4hanoi.app.service.impl;
 
+import com.trip4hanoi.app.dto.req.ItineraryDayRequest;
 import com.trip4hanoi.app.dto.req.ItineraryPlaceRequest;
 import com.trip4hanoi.app.dto.req.ItineraryRequest;
+import com.trip4hanoi.app.dto.req.ItineraryUpdateFullRequest;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
 import com.trip4hanoi.app.entity.*;
@@ -38,10 +40,14 @@ public class ItineraryServiceImpl implements ItineraryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        if( itineraryRepository.existsByTitleIgnoreCase(request.getTitle())) {
+            throw new AppException(ErrorCode.TITLE_EXIST);
+        }
+
         String trimmedTitle = request.getTitle() != null ? request.getTitle().trim() : "My Itinerary";
         Itinerary itinerary = itineraryRepository.findByUserIdAndTitleIgnoreCase(userId, trimmedTitle)
                 .orElseGet(() -> {
-                    Itinerary newItinerary = itineraryMapper.toItineraryEntity(request);
+                    Itinerary newItinerary = itineraryMapper.toItinerary(request);
                     newItinerary.setTitle(trimmedTitle);
                     newItinerary.setUser(user);
                     return newItinerary;
@@ -192,27 +198,358 @@ public class ItineraryServiceImpl implements ItineraryService {
         public double getScore() { return score; }
     }
 
-
-    @Override
     @Transactional
-    public ItineraryPlaceResponse addPlaceToItinerary(ItineraryPlaceRequest request) {
+    public ItineraryResponse addPlaceToItinerary(ItineraryPlaceRequest request) {
+
         Itinerary itinerary = itineraryRepository.findById(request.getItineraryId())
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
 
         Place place = placeRepository.findById(request.getPlaceId())
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
 
-        ItineraryPlace itineraryPlace = itineraryPlaceMapper.toItineraryPlaceEntity(request);
-        itineraryPlace.setItinerary(itinerary);
-        itineraryPlace.setPlace(place);
+        int day = request.getDayNumber();
 
-        return itineraryPlaceMapper.toItineraryPlaceResponse(itineraryPlaceRepository.save(itineraryPlace));
+        if (day < 1 || day > itinerary.getDays()) {
+            throw new AppException(ErrorCode.DAYS_INVALID);
+        }
+
+        int newCost = (place.getPriceAvg() != null ? place.getPriceAvg() : 0)
+                * (itinerary.getNumberOfPeople() != null ? itinerary.getNumberOfPeople() : 1);
+
+        int currentTotal = itineraryPlaceRepository.sumEstimatedCostByItineraryId(itinerary.getId());
+
+        if (currentTotal + newCost > itinerary.getBudget()) {
+            throw new AppException(ErrorCode.BUDGET_EXCEEDED);
+        }
+
+        if (itineraryPlaceRepository.existsByItineraryIdAndPlaceId(
+                request.getItineraryId(),
+                request.getPlaceId())) {
+
+            throw new AppException(ErrorCode.PLACE_ALREADY_EXISTS);
+        }
+
+        int count = itineraryPlaceRepository
+                .countByItineraryIdAndDayNumber(itinerary.getId(), day);
+
+        int orderIndex = request.getOrderIndex();
+
+        if (orderIndex < 1 || orderIndex > count + 1) {
+            throw new AppException(ErrorCode.INVALID_ORDER_INDEX);
+        }
+
+        itineraryPlaceRepository.shiftOrderIndex(
+                itinerary.getId(),
+                day,
+                orderIndex
+        );
+
+        String session;
+        if (orderIndex <= 2) session = "Morning";
+        else if (orderIndex <= 4) session = "Noon";
+        else if (orderIndex <= 6) session = "Afternoon";
+        else session = "Evening";
+
+        ItineraryPlace newPlace = ItineraryPlace.builder()
+                .itinerary(itinerary)
+                .place(place)
+                .dayNumber(day)
+                .orderIndex(orderIndex)
+                .session(session)
+                .estimatedCost(
+                        (place.getPriceAvg() != null ? place.getPriceAvg() : 0)
+                                * (itinerary.getNumberOfPeople() != null ? itinerary.getNumberOfPeople() : 1)
+                )
+                .build();
+
+        itineraryPlaceRepository.save(newPlace);
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    public int getRemainingBudget(Long itineraryId) {
+
+        Itinerary itinerary = itineraryRepository.findById(itineraryId)
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
+
+        int totalCost = itineraryPlaceRepository.sumEstimatedCostByItineraryId(itineraryId);
+
+        return itinerary.getBudget() - totalCost;
+    }
+
+    @Transactional
+    public ItineraryResponse updatePlaceInItinerary(ItineraryPlaceRequest request) {
+
+        ItineraryPlace existing = itineraryPlaceRepository.findById(request.getItineraryPlaceId())
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_PLACE_NOT_FOUND));
+
+        Itinerary itinerary = existing.getItinerary();
+
+        Place place = placeRepository.findById(request.getPlaceId())
+                .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+
+        int newDay = request.getDayNumber();
+
+        if (newDay < 1 || newDay > itinerary.getDays()) {
+            throw new AppException(ErrorCode.DAYS_INVALID);
+        }
+
+        int newOrderIndex = request.getOrderIndex();
+
+        itineraryPlaceRepository.decreaseOrderIndex(
+                itinerary.getId(),
+                existing.getDayNumber(),
+                existing.getOrderIndex()
+        );
+
+        int count = itineraryPlaceRepository
+                .countByItineraryIdAndDayNumber(itinerary.getId(), newDay);
+
+        if (newOrderIndex < 1 || newOrderIndex > count + 1) {
+            throw new AppException(ErrorCode.INVALID_ORDER_INDEX);
+        }
+
+        itineraryPlaceRepository.shiftOrderIndex(
+                itinerary.getId(),
+                newDay,
+                newOrderIndex
+        );
+
+        existing.setPlace(place);
+        existing.setDayNumber(newDay);
+        existing.setOrderIndex(newOrderIndex);
+
+        String session;
+        if (newOrderIndex <= 2) session = "Morning";
+        else if (newOrderIndex <= 4) session = "Noon";
+        else if (newOrderIndex <= 6) session = "Afternoon";
+        else session = "Evening";
+
+        existing.setSession(session);
+
+        existing.setEstimatedCost(
+                (place.getPriceAvg() != null ? place.getPriceAvg() : 0)
+                        * (itinerary.getNumberOfPeople() != null ? itinerary.getNumberOfPeople() : 1)
+        );
+
+        itineraryPlaceRepository.save(existing);
+
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    @Transactional
+    public ItineraryResponse removePlaceFromItinerary(Long itineraryPlaceId) {
+
+        ItineraryPlace existing = itineraryPlaceRepository.findById(itineraryPlaceId)
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_PLACE_NOT_FOUND));
+
+        Itinerary itinerary = existing.getItinerary();
+
+        int day = existing.getDayNumber();
+        int orderIndex = existing.getOrderIndex();
+
+
+        itineraryPlaceRepository.delete(existing);
+
+        itineraryPlaceRepository.decreaseOrderIndex(
+                itinerary.getId(),
+                day,
+                orderIndex
+        );
+
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    @Override
+    public void deleteItinerary(Long itineraryId) {
+        itineraryRepository.deleteById(itineraryId);
     }
 
     @Override
     public List<ItineraryResponse> getUserItineraries(Long userId) {
+
+        if( itineraryRepository.findByUserId(userId) == null ) {
+            throw new AppException(ErrorCode.PLAN_NOT_FOUND);
+        }
+
         return itineraryRepository.findByUserId(userId).stream()
                 .map(itineraryMapper::toItineraryResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public ItineraryResponse updateItinerary(ItineraryRequest request,long id) {
+
+        Itinerary itinerary = itineraryRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
+
+
+        if (request.getTitle() != null) {
+            itinerary.setTitle(request.getTitle());
+        }
+        if (request.getDays() != null) {
+            itinerary.setDays(request.getDays());
+        }
+        if (request.getBudget() != null) {
+            itinerary.setBudget(request.getBudget());
+        }
+        if (request.getNumberOfPeople() != null) {
+            itinerary.setNumberOfPeople(request.getNumberOfPeople());
+        }
+
+        return itineraryMapper.toItineraryResponse(itineraryRepository.save(itinerary));
+    }
+
+    @Transactional
+    public ItineraryResponse updateFull(ItineraryUpdateFullRequest request) {
+
+        Itinerary itinerary = itineraryRepository.findById(request.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
+
+
+        itinerary.setTitle(request.getTitle());
+        itinerary.setBudget(request.getBudget());
+        itinerary.setDays(request.getDays());
+        itinerary.setNumberOfPeople(request.getNumberOfPeople());
+
+        itineraryRepository.save(itinerary);
+
+
+        itineraryPlaceRepository.deleteByItineraryId(itinerary.getId());
+
+
+        for (ItineraryDayRequest dayReq : request.getItineraryDays()) {
+
+            int day = dayReq.getDayNumber();
+
+            for (ItineraryPlaceRequest p : dayReq.getPlaces()) {
+
+                Place place = placeRepository.findById(p.getPlaceId())
+                        .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+
+                String session;
+                if (p.getOrderIndex() <= 2) session = "Morning";
+                else if (p.getOrderIndex() <= 4) session = "Noon";
+                else if (p.getOrderIndex() <= 6) session = "Afternoon";
+                else session = "Evening";
+
+                ItineraryPlace entity = ItineraryPlace.builder()
+                        .itinerary(itinerary)
+                        .place(place)
+                        .dayNumber(day)
+                        .orderIndex(p.getOrderIndex())
+                        .session(session)
+                        .estimatedCost(
+                                (place.getPriceAvg() != null ? place.getPriceAvg() : 0)
+                                        * (itinerary.getNumberOfPeople() != null ? itinerary.getNumberOfPeople() : 1)
+                        )
+                        .build();
+
+                itineraryPlaceRepository.save(entity);
+            }
+        }
+
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    @Override
+    public ItineraryResponse getDetail(long id) {
+        Itinerary itinerary = itineraryRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
+        return itineraryMapper.toItineraryResponse(itinerary);
+    }
+
+    @Override
+    @Transactional
+    public ItineraryResponse reorderPlace(Long itineraryPlaceId, int newDay, int newOrderIndex) {
+
+        ItineraryPlace item = itineraryPlaceRepository.findById(itineraryPlaceId)
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_PLACE_NOT_FOUND));
+
+        Itinerary itinerary = item.getItinerary();
+
+        int oldDay = item.getDayNumber();
+        int oldIndex = item.getOrderIndex();
+
+
+        itineraryPlaceRepository.decreaseOrderIndex(
+                itinerary.getId(),
+                oldDay,
+                oldIndex
+        );
+
+        int count = itineraryPlaceRepository
+                .countByItineraryIdAndDayNumber(itinerary.getId(), newDay);
+
+        if (newOrderIndex < 1 || newOrderIndex > count + 1) {
+            throw new AppException(ErrorCode.INVALID_ORDER_INDEX);
+        }
+
+
+        itineraryPlaceRepository.shiftOrderIndex(
+                itinerary.getId(),
+                newDay,
+                newOrderIndex
+        );
+
+
+        item.setDayNumber(newDay);
+        item.setOrderIndex(newOrderIndex);
+
+        String session;
+        if (newOrderIndex <= 2) session = "Morning";
+        else if (newOrderIndex <= 4) session = "Noon";
+        else if (newOrderIndex <= 6) session = "Afternoon";
+        else session = "Evening";
+
+        item.setSession(session);
+
+        itineraryPlaceRepository.save(item);
+
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+
+    @Override
+    @Transactional
+    public ItineraryResponse cloneItinerary(Long itineraryId) {
+
+        Itinerary old = itineraryRepository.findByIdWithPlaces(itineraryId);
+
+        if (old == null) {
+            throw new AppException(ErrorCode.PLAN_NOT_FOUND);
+        }
+
+        Itinerary clone = Itinerary.builder()
+                .title(old.getTitle() + " (Copy)")
+                .budget(old.getBudget())
+                .days(old.getDays())
+                .numberOfPeople(old.getNumberOfPeople())
+                .user(old.getUser())
+                .build();
+
+        itineraryRepository.save(clone);
+
+        List<ItineraryPlace> newPlaces = old.getItineraryPlaces().stream()
+                .map(p -> ItineraryPlace.builder()
+                        .itinerary(clone)
+                        .place(p.getPlace())
+                        .dayNumber(p.getDayNumber())
+                        .orderIndex(p.getOrderIndex())
+                        .session(p.getSession())
+                        .estimatedCost(p.getEstimatedCost())
+                        .build()
+                ).toList();
+
+        itineraryPlaceRepository.saveAll(newPlaces);
+
+        Itinerary updated = itineraryRepository.findByIdWithPlaces(clone.getId());
+        return itineraryMapper.toItineraryResponse(updated);
+    }
+
+
 }

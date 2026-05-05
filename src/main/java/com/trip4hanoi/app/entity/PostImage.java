@@ -13,14 +13,17 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class PostImage {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+
+    private String imageUrl;
+
+    private String publicId;
+
+    @ManyToOne
     @JoinColumn(name = "post_id")
     private Post post;
-
-    @Column(name = "image_url")
-    private String imageUrl;
 }

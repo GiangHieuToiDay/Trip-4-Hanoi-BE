@@ -41,9 +41,11 @@ public class Place {
     @Column(name = "rating_avg")
     private Double ratingAvg; // Điểm đánh giá trung bình
 
+    @Builder.Default
     @Column(name = "view_count")
     private Integer viewCount = 0; // Lượt xem địa điểm
 
+    @Builder.Default
     @Column(name = "favorite_count")
     private Integer favoriteCount = 0; // Lượt yêu thích/lưu địa điểm
 

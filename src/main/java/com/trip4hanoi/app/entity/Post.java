@@ -23,9 +23,13 @@ public class Post {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column
+    private String title;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Builder.Default
     @Column(name = "view_count")
     private Integer viewCount = 0;
 
@@ -35,7 +39,7 @@ public class Post {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImage> images;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
@@ -44,7 +48,12 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
     private List<PostLike> likes;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
+    //@OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
+    @OneToMany(
+            mappedBy = "post",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<PostSave> saves;
 
     @ManyToMany

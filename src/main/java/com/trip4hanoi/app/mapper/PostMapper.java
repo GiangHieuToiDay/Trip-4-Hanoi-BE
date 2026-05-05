@@ -1,6 +1,7 @@
 package com.trip4hanoi.app.mapper;
 
 import com.trip4hanoi.app.dto.req.PostRequest;
+import com.trip4hanoi.app.dto.res.PostImageResponse;
 import com.trip4hanoi.app.dto.res.PostResponse;
 import com.trip4hanoi.app.entity.Place;
 import com.trip4hanoi.app.entity.Post;
@@ -17,9 +18,14 @@ public interface PostMapper {
 
     @Mapping(source = "user.id", target = "userId")
     @Mapping(source = "user.name", target = "userName")
-    @Mapping(source = "images", target = "imageUrls", qualifiedByName = "mapImagesToUrls")
+    @Mapping(source = "images", target = "images")
     @Mapping(source = "places", target = "taggedPlaceIds", qualifiedByName = "mapPlacesToIds")
+    @Mapping(target = "likeCount", expression = "java(post.getLikes() != null ? post.getLikes().size() : 0)")
+    @Mapping(target = "commentCount", expression = "java(post.getComments() != null ? post.getComments().size() : 0)")
+    @Mapping(target = "isLiked", ignore = true)
     PostResponse toPostResponse(Post post);
+
+    PostImageResponse toPostImageResponse(PostImage postImage);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
@@ -32,12 +38,6 @@ public interface PostMapper {
     @Mapping(target = "saves", ignore = true)
     @Mapping(target = "places", ignore = true)
     Post toPost(PostRequest request);
-
-    @Named("mapImagesToUrls")
-    default List<String> mapImagesToUrls(List<PostImage> images) {
-        if (images == null) return null;
-        return images.stream().map(PostImage::getImageUrl).collect(Collectors.toList());
-    }
 
     @Named("mapPlacesToIds")
     default List<Long> mapPlacesToIds(List<Place> places) {

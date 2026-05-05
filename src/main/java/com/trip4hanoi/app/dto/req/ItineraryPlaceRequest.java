@@ -8,8 +8,9 @@ import lombok.*;
 @Builder
 public class ItineraryPlaceRequest {
     private Long itineraryId;
+    private Long itineraryPlaceId;
     private Long placeId;
     private Integer dayNumber;
     private Integer orderIndex;
-    private Integer estimatedCost;
+    //private Integer estimatedCost; // k cần nhập
 }
