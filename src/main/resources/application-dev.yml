@@ -1,22 +1,37 @@
-server:
-  port: 8080
-
 spring:
-  application:
-    name: Trip4HaNoi-BE
-  
-  profiles:
-    active: "@spring.profiles.active@"
+  datasource:
+    url: jdbc:mysql://localhost:3306/trip4hanoi
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
-# Cấu hình chung cho tất cả các môi trường
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
 
-logging:
-  level:
-    root: info
-    web: info
-    com.trip4hanoi.app: debug
+gemini:
+  api:
+    key: AIzaSyDT_JP0VrvzWW1fcourZ9NzGS9ApuhjuaY
+
+cloudinary:
+  cloud-name: dfvq2ckbi
+  api-key: 283211323636595
+  api-secret: pGxOZ7KcTVk76ETXvGsiWgPYtLQ
+
+
+openapi:
+  service:
+    api-docs: TRIP4-HANOI
+    title: TRIP4 HA NOI APP API Document
+    version: 1.0.0
+    server: http://localhost:8080
+
+
+app:
+  init:
+    admin-password: ${ADMIN_PASSWORD:123456}
+    staff-password: ${STAFF_PASSWORD:123456}
