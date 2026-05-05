@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GeminiServiceImpl implements GeminiService {
+public class  GeminiServiceImpl implements GeminiService {
 
     private final WebClient geminiWebClient;
     private final PlaceRepository placeRepository;

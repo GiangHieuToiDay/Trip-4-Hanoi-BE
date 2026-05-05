@@ -1,52 +1,71 @@
 package com.trip4hanoi.app.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@AllArgsConstructor
 public enum ErrorCode {
-    USER_NOT_FOUND(1001, "User not found"),
-    USERNAME_ALREADY_EXISTS(1002, "Username already exists"),
-    INVALID_PASSWORD(1003, "Invalid password"),
-    UNAUTHORIZED(1004, "Unauthorized"),
-    FORBIDDEN(1005, "Forbidden"),
-    USER_LIST_EMPTY(1006,"List is Empty"),
-    NOT_FOUND_ROLE(1007,"Role not found"),
-    EMAIL_ALREADY_EXISTS(1008,"Email already exists"),
-    INVALID_CREDENTIALS(1009, "Invalid credentials"),
-    CANOT_CREATE_TOKEN(1010, "Can not create token jwt"),
-    CANOT_SEND_EMAIL(1011, "Can not send email"),
-    TOKEN_NOT_FOUND(1012, "Token not found"),
-    TOKEN_EXPIRED(1013, "Token expired"),
-    POST_IS_EMPTY(1014, "Post is empty"),
-    POST_NOT_FOUND(1015, "Post not found"),
-    CATEGORY_NOT_FOUND(1016, "Category not found"),
-    CATEGORY_NAME_IS_EXIST(1017, "Category name already exists"),
-    COMMENT_NOT_FOUND(1018, "Comment not found"),
-    COMMENT_NOT_BY_USER(1019, "Comment not by user"),
-    PLAN_NOT_FOUND(1020, "User not have plan"),
-    TYPE_NOT_FOUND(1021, "Type not found"),
-    YOU_NOT_HAVE_AUTHOR_TO_DO_ACTION(1022, "You canot do action"),
-    TITLE_EXIST (1023, "Title is exist"),
-    BUDGET_NOT_ENOUGHT (1024, "Budget is not enought"),
-    PLACE_IS_EXIST (1025, "Place is exist"),
-    PLACE_NOT_FOUND(1026,"Place not found"),
-    DAYS_INVALID(1027, "Days invalid"),
-    INVALID_ORDER_INDEX(1028, "Invalid order index"),
-    PLAN_PLACE_NOT_FOUND(1029, "Plan place not found"),
-    BUDGET_EXCEEDED(1024, "Budget exceeded"),
-    PLACE_ALREADY_EXISTS(1024, "Place already exists"),
-    UPLOAD_FAIL(1025, "Upload failed");
+
+    // SYSTEM ERRORS
+    UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_KEY(8888, "Invalid message key", HttpStatus.BAD_REQUEST),
+
+    // USER ERRORS
+    USER_NOT_FOUND(1001, "User not found", HttpStatus.NOT_FOUND),
+    USERNAME_ALREADY_EXISTS(1002, "Username already exists", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD(1003, "Invalid password", HttpStatus.BAD_REQUEST),
+    UNAUTHORIZED(1004, "Unauthorized", HttpStatus.UNAUTHORIZED),
+    FORBIDDEN(1005, "Forbidden", HttpStatus.FORBIDDEN),
+    USER_LIST_EMPTY(1006, "User list is empty", HttpStatus.NOT_FOUND),
+    NOT_FOUND_ROLE(1007, "Role not found", HttpStatus.NOT_FOUND),
+    EMAIL_ALREADY_EXISTS(1008, "Email already exists", HttpStatus.BAD_REQUEST),
+    INVALID_CREDENTIALS(1009, "Invalid credentials", HttpStatus.UNAUTHORIZED),
+
+    // TOKEN & AUTH ERRORS
+    CANOT_CREATE_TOKEN(1010, "Cannot create JWT token", HttpStatus.INTERNAL_SERVER_ERROR),
+    CANOT_SEND_EMAIL(1011, "Cannot send email", HttpStatus.INTERNAL_SERVER_ERROR),
+    TOKEN_NOT_FOUND(1012, "Token not found", HttpStatus.NOT_FOUND),
+    TOKEN_EXPIRED(1013, "Token expired", HttpStatus.UNAUTHORIZED),
+
+    // POST ERRORS
+    POST_IS_EMPTY(1014, "Post is empty", HttpStatus.NOT_FOUND),
+    POST_NOT_FOUND(1015, "Post not found", HttpStatus.NOT_FOUND),
+
+    // CATEGORY
+    CATEGORY_NOT_FOUND(1016, "Category not found", HttpStatus.NOT_FOUND),
+    CATEGORY_NAME_IS_EXIST(1017, "Category name already exists", HttpStatus.BAD_REQUEST),
+
+    // COMMENT
+    COMMENT_NOT_FOUND(1018, "Comment not found", HttpStatus.NOT_FOUND),
+    COMMENT_NOT_BY_USER(1019, "Comment not by user", HttpStatus.FORBIDDEN),
+
+    // PLAN / ITINERARY (THÊM TỪ CODE CỦA M)
+    PLAN_NOT_FOUND(1020, "User not have plan", HttpStatus.NOT_FOUND),
+    TYPE_NOT_FOUND(1021, "Type not found", HttpStatus.NOT_FOUND),
+    YOU_NOT_HAVE_AUTHOR_TO_DO_ACTION(1022, "You cannot do this action", HttpStatus.FORBIDDEN),
+    TITLE_EXIST(1023, "Title already exists", HttpStatus.BAD_REQUEST),
+
+    BUDGET_NOT_ENOUGH(1024, "Budget is not enough", HttpStatus.BAD_REQUEST),
+    PLACE_IS_EXIST(1025, "Place already exists", HttpStatus.BAD_REQUEST),
+
+    PLACE_NOT_FOUND(1026, "Place not found", HttpStatus.NOT_FOUND),
+    DAYS_INVALID(1027, "Days invalid", HttpStatus.BAD_REQUEST),
+    INVALID_ORDER_INDEX(1028, "Invalid order index", HttpStatus.BAD_REQUEST),
+    PLAN_PLACE_NOT_FOUND(1029, "Plan place not found", HttpStatus.NOT_FOUND),
+
+    BUDGET_EXCEEDED(1030, "Budget exceeded", HttpStatus.BAD_REQUEST),
+    PLACE_ALREADY_EXISTS(1031, "Place already exists", HttpStatus.BAD_REQUEST),
+    UPLOAD_FAIL(1032, "Upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // CHAT
+    BOX_CHAT_NOT_FOUND(1033, "Box chat not found", HttpStatus.NOT_FOUND),
+    NOT_FOUND_BOX_PARTICIPANT(1034, "Box participant not found", HttpStatus.NOT_FOUND),
+    USER_ALREADY_IN_BOX(1035, "User already in box", HttpStatus.BAD_REQUEST),
+    USER_NOT_FOUND_IN_BOX(1036, "User not found in box", HttpStatus.NOT_FOUND);
 
     private final int code;
     private final String message;
-
-    ErrorCode(int code, String message) {
-        this.code = code;
-        this.message = message;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
+    private final HttpStatus status;
 }

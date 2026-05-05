@@ -1,6 +1,12 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: Trip4HaNoi-BE
+
+  profiles:
+    active: "@spring.profiles.active@"
 
   servlet:
     multipart:
@@ -21,8 +27,18 @@ spring:
     hibernate:
       ddl-auto: update
 
-server:
-  port: 8080
+# Cấu hình chung cho tất cả môi trường
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+logging:
+  level:
+    root: info
+    web: info
+    com.trip4hanoi.app: debug
 
 springdoc:
   api-docs:

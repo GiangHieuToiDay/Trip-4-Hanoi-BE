@@ -13,5 +13,5 @@ public interface CategoryMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "places", ignore = true)
     @Mapping(target = "userPreferences", ignore = true)
-    Category toCategory(CategoryRequest request);
+    Category toCategoryEntity(CategoryRequest request);
 }
