@@ -4,6 +4,7 @@ import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.PlaceDetailResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
 import com.trip4hanoi.app.service.PlaceService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +41,18 @@ public class PlaceController {
         return ResponseEntity.ok(response);
     }
 
+    //@Operation(summary = "Get place detail", description = "API get detailed information of a place")
     @GetMapping("/{id}")
-    public ResponseEntity<PlaceDetailResponse> getPlaceDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(placeService.getPlaceDetail(id));
+    public ResponseEntity<APIResponse<PlaceDetailResponse>> getPlaceDetail(@PathVariable Long id) {
+        PlaceDetailResponse detail = placeService.getPlaceDetail(id);
+
+        APIResponse<PlaceDetailResponse> response = APIResponse.<PlaceDetailResponse>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved place detail")
+                .data(detail)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

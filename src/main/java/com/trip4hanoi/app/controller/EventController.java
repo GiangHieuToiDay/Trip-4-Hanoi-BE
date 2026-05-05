@@ -22,7 +22,7 @@ public class EventController {
 //        return ResponseEntity.ok(eventService.getAllEvents());
 //    }
 
-    @Operation(summary = "Get all events", description = "API get all available events")
+    //@Operation(summary = "Get all events", description = "API get all available events")
     @GetMapping
     public ResponseEntity<APIResponse<List<EventResponse>>> getAllEvents() {
 

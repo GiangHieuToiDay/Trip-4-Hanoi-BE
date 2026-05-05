@@ -1,17 +1,21 @@
 package com.trip4hanoi.app.mapper;
 
 import com.trip4hanoi.app.dto.req.PlaceRequest;
+import com.trip4hanoi.app.dto.res.PlaceDetailResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
 import com.trip4hanoi.app.entity.Place;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {ReviewMapper.class, EventMapper.class})
 public interface PlaceMapper {
 
     @Mapping(source = "category.id", target = "categoryId")
     @Mapping(source = "category.name", target = "categoryName")
     PlaceResponse toPlaceResponse(Place place);
+
+    @Mapping(source = "category.name", target = "categoryName")
+    PlaceDetailResponse toPlaceDetailResponse(Place place);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "category", ignore = true)

@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: Trip4HaNoi-BE
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/trip4hanoi
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+gemini:
+  api:
+    key: AIzaSyDT_JP0VrvzWW1fcourZ9NzGS9ApuhjuaY
+
+cloudinary:
+  cloud-name: dfvq2ckbi
+  api-key: 283211323636595
+  api-secret: pGxOZ7KcTVk76ETXvGsiWgPYtLQ
