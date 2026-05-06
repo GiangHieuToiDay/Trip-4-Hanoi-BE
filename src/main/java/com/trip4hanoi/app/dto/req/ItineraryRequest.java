@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -35,4 +36,7 @@ public class ItineraryRequest {
     private Integer numberOfPeople;
 
     private List<@NotBlank(message = "Category name invalid") String> categoryNames;
+
+
+    private LocalDate startDate;
 }

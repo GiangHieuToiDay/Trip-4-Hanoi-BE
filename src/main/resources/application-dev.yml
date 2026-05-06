@@ -15,12 +15,12 @@ spring:
 
 gemini:
   api:
-    key: AIzaSyDT_JP0VrvzWW1fcourZ9NzGS9ApuhjuaY
+    key: ${GEMINI_API_KEY}
 
 cloudinary:
-  cloud-name: dfvq2ckbi
-  api-key: 283211323636595
-  api-secret: pGxOZ7KcTVk76ETXvGsiWgPYtLQ
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 
 openapi:
