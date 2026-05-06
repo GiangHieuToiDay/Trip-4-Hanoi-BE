@@ -7,6 +7,7 @@ import com.trip4hanoi.app.dto.res.PlaceDetailResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
 import com.trip4hanoi.app.entity.Category;
 import com.trip4hanoi.app.entity.Place;
+import com.trip4hanoi.app.entity.PlaceImage;
 import com.trip4hanoi.app.exception.AppException;
 import com.trip4hanoi.app.exception.ErrorCode;
 import com.trip4hanoi.app.mapper.PlaceMapper;
@@ -21,10 +22,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,43 +37,90 @@ public class PlaceServiceImpl implements PlaceService {
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
     private final PlaceMapper placeMapper;
+    private final com.trip4hanoi.app.service.CloudinaryService cloudinaryService;
 
+    /**
+     * ENDPOINT - USER: Lấy tất cả địa điểm theo category
+     * @param categoryId
+     * @return
+     */
     @Override
     public List<PlaceResponse> getAllPlaces(Long categoryId) {
         List<Place> places;
         if (categoryId != null) {
-            places = placeRepository.findByCategoryId(categoryId);
+            places = placeRepository.findByCategoryIdAndDeletedFalse(categoryId);
         } else {
-            places = placeRepository.findAll();
+            places = placeRepository.findAllByDeletedFalse();
         }
         return places.stream()
                 .map(placeMapper::toPlaceResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * ENDPOINT - USER: Lấy chi tiết địa điểm
+     * @param id
+     * @return
+     */
     @Override
     public PlaceDetailResponse getPlaceDetail(Long id) {
         Place place = placeRepository.findById(id)
+                .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
         return placeMapper.toPlaceDetailResponse(place);
     }
 
+    /**
+     * ENDPOINT - ADMIN: Tạo địa điểm mới kèm album ảnh
+     * @param request
+     * @param images
+     * @return
+     */
     @Override
     @Transactional
-    public PlaceResponse createPlace(PlaceRequest request) {
+    public PlaceResponse createPlace(PlaceRequest request, MultipartFile[] images) {
         Place place = placeMapper.toPlace(request);
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
             place.setCategory(category);
         }
+        
+        place.setImages(new java.util.ArrayList<>());
+        
+        // Upload images to Cloudinary (folder places)
+        if (images != null && images.length > 0) {
+            for (MultipartFile img : images) {
+                if (!img.isEmpty()) {
+                    try {
+                        java.util.Map res = cloudinaryService.uploadFile(img);
+                        place.getImages().add(PlaceImage.builder()
+                                .imageUrl(res.get("secure_url").toString())
+                                .publicId(res.get("public_id").toString())
+                                .place(place)
+                                .build());
+                    } catch (Exception e) {
+                        log.error("Upload place image failed: {}", e.getMessage());
+                    }
+                }
+            }
+        }
+        
         return placeMapper.toPlaceResponse(placeRepository.save(place));
     }
 
+    /**
+     * ENDPOINT - ADMIN: Cập nhật địa điểm và quản lý album ảnh (giữ ảnh cũ, thêm ảnh mới)
+     * @param id
+     * @param request
+     * @param images
+     * @return
+     */
     @Override
     @Transactional
-    public PlaceResponse updatePlace(Long id, PlaceRequest request) {
+    public PlaceResponse updatePlace(Long id, PlaceRequest request,MultipartFile[] images) {
         Place place = placeRepository.findById(id)
+                .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
         
         placeMapper.updatePlace(place, request);
@@ -80,17 +130,62 @@ public class PlaceServiceImpl implements PlaceService {
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
             place.setCategory(category);
         }
+
+        // 1. Xử lý xóa ảnh không nằm trong danh sách giữ lại
+        List<PlaceImage> currentImages = place.getImages();
+        List<PlaceImage> toRemove = new ArrayList<>();
+        
+        if (request.getKeepImageIds() != null) {
+            for (PlaceImage img : currentImages) {
+                if (!request.getKeepImageIds().contains(img.getId())) {
+                    toRemove.add(img);
+                }
+            }
+        } else {
+            // Nếu không gửi keepImageIds, mặc định xóa hết ảnh cũ nếu có upload ảnh mới
+            if (images != null && images.length > 0) {
+                toRemove.addAll(currentImages);
+            }
+        }
+
+        for (PlaceImage img : toRemove) {
+            cloudinaryService.deleteFile(img.getPublicId());
+            currentImages.remove(img);
+        }
+
+        // 2. Thêm ảnh mới
+        if (images != null && images.length > 0) {
+            for (MultipartFile img : images) {
+                if (!img.isEmpty()) {
+                    try {
+                        Map res = cloudinaryService.uploadFile(img);
+                        currentImages.add(PlaceImage.builder()
+                                .imageUrl(res.get("secure_url").toString())
+                                .publicId(res.get("public_id").toString())
+                                .place(place)
+                                .build());
+                    } catch (Exception e) {
+                        log.error("Upload new place image failed: {}", e.getMessage());
+                    }
+                }
+            }
+        }
         
         return placeMapper.toPlaceResponse(placeRepository.save(place));
     }
 
+    /**
+     * ENDPOINT - ADMIN: Xóa mềm địa điểm
+     * @param id
+     */
     @Override
     @Transactional
     public void deletePlace(Long id) {
-        if (!placeRepository.existsById(id)) {
-            throw new AppException(ErrorCode.PLACE_NOT_FOUND);
-        }
-        placeRepository.deleteById(id);
+        Place place = placeRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+        
+        place.setDeleted(true);
+        placeRepository.save(place);
     }
 
     @Override

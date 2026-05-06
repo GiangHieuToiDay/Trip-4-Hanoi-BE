@@ -2,6 +2,7 @@ package com.trip4hanoi.app.dto.res;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -15,4 +16,6 @@ public class EventResponse {
     private String placeName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private String status; // UPCOMING, ONGOING, ENDED
+    private List<ImageResponse> images; // Danh sách album ảnh
 }

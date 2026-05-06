@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -33,6 +34,7 @@ public class ItineraryServiceImpl implements ItineraryService {
     private final CategoryRepository categoryRepository;
     private final ItineraryMapper itineraryMapper;
     private final ItineraryPlaceMapper itineraryPlaceMapper;
+    private final EventRepository eventRepository;
 
     @Override
     @Transactional
@@ -81,8 +83,9 @@ public class ItineraryServiceImpl implements ItineraryService {
         
         double dailyBudget = (double) totalBudget / numDays;
         double budgetPerPersonPerDay = dailyBudget / numPeople;
-        
-        List<Place> allPossiblePlaces = placeRepository.findAll();
+
+        //Chỉ lấy những địa điểm chưa bị xóa
+        List<Place> allPossiblePlaces = placeRepository.findAllByDeletedFalse();
         List<ItineraryPlace> itineraryPlaces = new java.util.ArrayList<>();
         List<Place> usedPlaces = new java.util.ArrayList<>();
         java.util.Random random = new java.util.Random();
@@ -131,6 +134,9 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     if (candidates.isEmpty()) break;
 
+
+                    // Xác định ngày hiện tại của lịch trình
+                    LocalDate travelDate = (request.getStartDate() != null) ? request.getStartDate().plusDays(day -1) : LocalDate.now().plusDays(day-1);
                     // Scoring
                     List<PlaceScore> scoredPlaces = candidates.stream()
                             .map(pl -> {
@@ -140,13 +146,31 @@ public class ItineraryServiceImpl implements ItineraryService {
                                 double budgetFit = 1.0 - Math.min(1.0, Math.abs(price - budgetPerPlaceTarget) / (budgetPerPlaceTarget + 1));
                                 
                                 double totalScore = 0.4 * prefMatch + 0.3 * ratingScore + 0.3 * budgetFit;
-                                return new PlaceScore(pl, totalScore);
+
+                                //Kiểm tra Event Bonus
+                                double eventBonus = 0.0;
+                                Event foundEvent = null;
+                                List<Event>  events = eventRepository.findByPlaceId(pl.getId());
+                                for (Event ev : events) {
+                                    // Kiểm tra xem travelDate có nằm trong khoảng diễn ra event không
+                                    if(!travelDate.isBefore(ev.getStartTime().toLocalDate()) &&
+                                    !travelDate.isAfter(ev.getEndTime().toLocalDate())) {
+                                        eventBonus = 1.0; // cộng hẳn 1 điểm
+                                        foundEvent = ev;
+                                        break;
+                                    }
+                                }
+                                return new PlaceScore(pl, totalScore +eventBonus, foundEvent);
                             })
                             .sorted(Comparator.comparingDouble(PlaceScore::getScore).reversed())
                             .limit(5)
                             .collect(Collectors.toList());
 
-                    Place foundPlace = scoredPlaces.get(random.nextInt(scoredPlaces.size())).getPlace();
+                    //chọn ngẫu nhiên
+                    PlaceScore chosenWrapper = scoredPlaces.get(random.nextInt(scoredPlaces.size()));
+                    Place foundPlace = chosenWrapper.getPlace();
+                    Event activeEvent = chosenWrapper.getActiveEvent();// lấy event
+
                     
                     usedPlaces.add(foundPlace);
                     String chosenCat = foundPlace.getCategory().getName();
@@ -158,6 +182,7 @@ public class ItineraryServiceImpl implements ItineraryService {
                     ItineraryPlace itineraryPlace = ItineraryPlace.builder()
                             .itinerary(itinerary)
                             .place(foundPlace)
+                            .event(activeEvent)
                             .dayNumber(day)
                             .orderIndex(orderInDay++)
                             .session(session)
@@ -193,9 +218,12 @@ public class ItineraryServiceImpl implements ItineraryService {
     private static class PlaceScore {
         private final Place place;
         private final double score;
-        public PlaceScore(Place place, double score) { this.place = place; this.score = score; }
+        private final Event activeEvent; //Trường này lưu event tìm được
+
+        public PlaceScore(Place place, double score, Event activeEvent) { this.place = place; this.score = score;  this.activeEvent = activeEvent;}
         public Place getPlace() { return place; }
         public double getScore() { return score; }
+        public Event getActiveEvent() { return activeEvent; }
     }
 
     @Transactional

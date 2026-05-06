@@ -9,6 +9,13 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
+import com.trip4hanoi.app.dto.res.ImageResponse;
+import com.trip4hanoi.app.entity.PlaceImage;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+
 @Mapper(componentModel = "spring", uses = {ReviewMapper.class, EventMapper.class})
 public interface PlaceMapper {
 
@@ -28,6 +35,7 @@ public interface PlaceMapper {
     @Mapping(target = "itineraryPlaces", ignore = true)
     @Mapping(target = "savedByUsers", ignore = true)
     @Mapping(target = "posts", ignore = true)
+    @Mapping(target = "images", ignore = true)
     Place toPlace(PlaceRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -39,6 +47,9 @@ public interface PlaceMapper {
     @Mapping(target = "itineraryPlaces", ignore = true)
     @Mapping(target = "savedByUsers", ignore = true)
     @Mapping(target = "posts", ignore = true)
+    @Mapping(target = "images", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updatePlace(@org.mapstruct.MappingTarget Place place, PlaceRequest request);
+
+    ImageResponse toImageResponse(PlaceImage image);
 }

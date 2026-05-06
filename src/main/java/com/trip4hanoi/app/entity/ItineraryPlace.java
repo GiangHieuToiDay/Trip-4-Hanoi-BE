@@ -32,4 +32,9 @@ public class ItineraryPlace {
 
     @Column(name = "estimated_cost")
     private Integer estimatedCost;
+
+   @ManyToOne(fetch = FetchType.LAZY)
+   @JoinColumn(name = "event_id")
+   private Event event;
+
 }

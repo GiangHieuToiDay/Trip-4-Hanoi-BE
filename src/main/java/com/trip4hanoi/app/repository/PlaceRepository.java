@@ -10,10 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecificationExecutor<Place> {
-    List<Place> findByCategoryId(Long categoryId);
+    List<Place> findByCategoryIdAndDeletedFalse(Long categoryId);
+    List<Place> findAllByDeletedFalse();
+    Optional<Place> findByNameAndDeletedFalse(String name);
 
-
+    Optional<Place> findByName(String name);
 }

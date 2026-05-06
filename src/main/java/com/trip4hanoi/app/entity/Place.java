@@ -49,8 +49,8 @@ public class Place {
     @Column(name = "favorite_count")
     private Integer favoriteCount = 0; // Lượt yêu thích/lưu địa điểm
 
-    @Column(name = "image_url")
-    private String imageUrl; // Link ảnh đại diện địa điểm
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PlaceImage> images; // Album ảnh của địa điểm này
 
     @OneToMany(mappedBy = "place", cascade = CascadeType.ALL)
     private List<Review> reviews; // Các đánh giá của địa điểm này
@@ -66,4 +66,7 @@ public class Place {
 
     @ManyToMany(mappedBy = "places")
     private List<Post> posts; // Các bài đăng tag địa điểm này
+
+    @Builder.Default
+    private boolean deleted = false;
 }
