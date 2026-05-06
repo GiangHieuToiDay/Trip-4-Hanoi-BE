@@ -16,7 +16,9 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring", uses = {ReviewMapper.class, EventMapper.class})
+@Mapper(componentModel = "spring",
+        uses = {ReviewMapper.class, EventMapper.class},
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface PlaceMapper {
 
     @Mapping(source = "category.id", target = "categoryId")

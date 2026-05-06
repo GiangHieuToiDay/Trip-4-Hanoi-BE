@@ -118,23 +118,40 @@ public class PlaceServiceImpl implements PlaceService {
      */
     @Override
     @Transactional
-    public PlaceResponse updatePlace(Long id, PlaceRequest request,MultipartFile[] images) {
+    public PlaceResponse updatePlace(Long id, PlaceRequest request, MultipartFile[] images) {
+
         Place place = placeRepository.findById(id)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
-        
-        placeMapper.updatePlace(place, request);
-        
+
+        // Cập nhật category )
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
             place.setCategory(category);
         }
 
-        // 1. Xử lý xóa ảnh không nằm trong danh sách giữ lại
+        placeMapper.updatePlace(place, request);
+
+        // Xử lý album ảnh
         List<PlaceImage> currentImages = place.getImages();
+
+        // ---  VALIDATION: Kiểm tra ID ảnh gửi lên có thuộc Place này không ---
+        List<Long> actualImageIds = currentImages.stream()
+                .map(PlaceImage::getId)
+                .collect(Collectors.toList());
+
+        if (request.getKeepImageIds() != null) {
+            for (Long keepId : request.getKeepImageIds()) {
+                if (!actualImageIds.contains(keepId)) {
+                    throw new AppException(ErrorCode.IMAGE_NOT_FOUND); // Tránh xóa nhầm hoặc gửi ID linh tinh
+                }
+            }
+        }
+
+
+        //  Xác định danh sách ảnh cần xóa
         List<PlaceImage> toRemove = new ArrayList<>();
-        
         if (request.getKeepImageIds() != null) {
             for (PlaceImage img : currentImages) {
                 if (!request.getKeepImageIds().contains(img.getId())) {
@@ -142,18 +159,19 @@ public class PlaceServiceImpl implements PlaceService {
                 }
             }
         } else {
-            // Nếu không gửi keepImageIds, mặc định xóa hết ảnh cũ nếu có upload ảnh mới
+            // Nếu không gửi keepImageIds mà có upload ảnh mới -> Mặc định xóa hết ảnh cũ
             if (images != null && images.length > 0) {
                 toRemove.addAll(currentImages);
             }
         }
 
+        // Thực hiện xóa trên Cloudinary và Database
         for (PlaceImage img : toRemove) {
             cloudinaryService.deleteFile(img.getPublicId());
             currentImages.remove(img);
         }
 
-        // 2. Thêm ảnh mới
+        // Thêm ảnh mới từ MultipartFile
         if (images != null && images.length > 0) {
             for (MultipartFile img : images) {
                 if (!img.isEmpty()) {
@@ -170,7 +188,7 @@ public class PlaceServiceImpl implements PlaceService {
                 }
             }
         }
-        
+
         return placeMapper.toPlaceResponse(placeRepository.save(place));
     }
 

@@ -122,34 +122,61 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventResponse updateEvent(Long id, EventRequest request, MultipartFile[] images) {
+        //  Tìm Event cần update
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
-        Place place = placeRepository.findById(request.getPlaceId())
-                .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+        //  Tìm Place mới (nếu có gửi placeId)
+        if (request.getPlaceId() != null) {
+            Place place = placeRepository.findById(request.getPlaceId())
+                    .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+            event.setPlace(place);
+        }
+
 
         eventMapper.updateEvent(event, request);
-        event.setPlace(place);
 
-        // Xử lý album ảnh
+        //  Xử lý album ảnh
         List<EventImage> currentImages = event.getImages();
-        List<EventImage> toRemove = new ArrayList<>();
-        
+
+        // ---  (VALIDATION) ID ẢNH ---
+        List<Long> actualImageIds = currentImages.stream()
+                .map(EventImage::getId)
+                .collect(Collectors.toList());
+
         if (request.getKeepImageIds() != null) {
-            for (EventImage img : currentImages) {
-                if (!request.getKeepImageIds().contains(img.getId())) {
-                    toRemove.add(img);
+            for (Long keepId : request.getKeepImageIds()) {
+                // Nếu gửi ID không tồn tại trong danh sách ảnh của Event này -> Báo lỗi
+                if (!actualImageIds.contains(keepId)) {
+                    throw new AppException(ErrorCode.IMAGE_NOT_FOUND);
                 }
             }
         }
 
+
+        //  Xác định danh sách ảnh cần xóa khỏi Cloudinary và Database
+        List<EventImage> toRemove = new ArrayList<>();
+        if (request.getKeepImageIds() != null) {
+            for (EventImage img : currentImages) {
+                // Nếu ảnh hiện tại không nằm trong danh sách muốn giữ -> Xóa
+                if (!request.getKeepImageIds().contains(img.getId())) {
+                    toRemove.add(img);
+                }
+            }
+        } else {
+            // Nếu không gửi keepImageIds, mặc định xóa sạch ảnh cũ
+            toRemove.addAll(currentImages);
+        }
+
+        // Thực hiện xóa
         for (EventImage img : toRemove) {
             cloudinaryService.deleteFile(img.getPublicId());
             currentImages.remove(img);
         }
 
+        // Upload thêm ảnh mới (nếu có)
         if (images != null && images.length > 0) {
-            for (org.springframework.web.multipart.MultipartFile img : images) {
+            for (MultipartFile img : images) {
                 if (!img.isEmpty()) {
                     try {
                         Map res = cloudinaryService.uploadFile(img);
@@ -159,11 +186,12 @@ public class EventServiceImpl implements EventService {
                                 .event(event)
                                 .build());
                     } catch (Exception e) {
-                       log.error(e.getMessage());
+                        log.error("Upload image failed: " + e.getMessage());
                     }
                 }
             }
         }
+
 
         return eventMapper.toEventResponse(eventRepository.save(event));
     }

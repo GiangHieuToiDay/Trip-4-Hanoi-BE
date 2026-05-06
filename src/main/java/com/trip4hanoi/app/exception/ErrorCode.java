@@ -54,6 +54,7 @@ public enum ErrorCode {
     DAYS_INVALID(1027, "Days invalid", HttpStatus.BAD_REQUEST),
     INVALID_ORDER_INDEX(1028, "Invalid order index", HttpStatus.BAD_REQUEST),
     PLAN_PLACE_NOT_FOUND(1029, "Plan place not found", HttpStatus.NOT_FOUND),
+    IMAGE_NOT_FOUND(1038, "Image  not found", HttpStatus.NOT_FOUND),
 
     BUDGET_EXCEEDED(1030, "Budget exceeded", HttpStatus.BAD_REQUEST),
     PLACE_ALREADY_EXISTS(1031, "Place already exists", HttpStatus.BAD_REQUEST),

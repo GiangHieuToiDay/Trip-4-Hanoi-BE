@@ -12,10 +12,10 @@ import com.trip4hanoi.app.dto.res.ImageResponse;
 import com.trip4hanoi.app.entity.EventImage;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-
+import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.time.LocalDateTime;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface EventMapper {
 
     @Mapping(source = "place.id", target = "placeId")
@@ -45,9 +45,17 @@ public interface EventMapper {
      * @return
      */
     default String calculateStatus(Event event) {
+        // Kiểm tra null để tránh NullPointerException khi startTime hoặc endTime chưa có dữ liệu
+        if (event.getStartTime() == null || event.getEndTime() == null) {
+            return "UPCOMING"; // Trạng thái mặc định nếu thiếu dữ liệu thời gian
+        }
+
         LocalDateTime now = java.time.LocalDateTime.now();
+
+        // So sánh an toàn sau khi đã check null
         if (now.isBefore(event.getStartTime())) return "UPCOMING";
         if (now.isAfter(event.getEndTime())) return "ENDED";
+
         return "ONGOING";
     }
 }
