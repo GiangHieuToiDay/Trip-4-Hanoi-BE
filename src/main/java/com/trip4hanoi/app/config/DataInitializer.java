@@ -1,19 +1,14 @@
 package com.trip4hanoi.app.config;
 
 import com.trip4hanoi.app.common.AuthProvider;
-import com.trip4hanoi.app.entity.Category;
-import com.trip4hanoi.app.entity.Place;
-import com.trip4hanoi.app.entity.User;
-import com.trip4hanoi.app.entity.UserPreference;
-import com.trip4hanoi.app.repository.CategoryRepository;
-import com.trip4hanoi.app.repository.PlaceRepository;
-import com.trip4hanoi.app.repository.UserPreferenceRepository;
-import com.trip4hanoi.app.repository.UserRepository;
+import com.trip4hanoi.app.entity.*;
+import com.trip4hanoi.app.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
+    private final EventRepository eventRepository;
 
     @Override
     @Transactional
@@ -131,6 +127,39 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         System.out.println(">>> LOAD FULL DATA + USER + PREFERENCES SUCCESS!");
+
+
+        //event
+        if(eventRepository.count() == 0) {
+            //lấy 1 vài địa điểm tiêu biểu để gắn event
+            Place vanMieu = placeRepository.findByName("Văn Miếu").orElse(null);
+            Place baoTangMyThuat = placeRepository.findByName("Bảo tàng Mỹ Thuật").orElse(null);
+            Place phoDiBo = placeRepository.findByName("Đền Ngọc Sơn").orElse(null);
+
+            if(vanMieu != null) {
+                eventRepository.save(Event.builder()
+                     .name("Lễ hội Chữ Xuân 2026")
+                     .description("Hoạt động xin chữ đầu năm và triển lãm thư pháp đặc sắc.")
+                     .place(vanMieu)
+                     .startTime(LocalDateTime.of(2026, 5, 1, 8, 0))
+                     .endTime(LocalDateTime.of(2026, 5, 10, 18, 0))
+                     .build());
+            }
+
+            if (baoTangMyThuat != null) {
+                eventRepository.save(Event.builder().name("Triển lãm Sơn mài Hiện đại")
+                                .description("Trưng bày hơn 50 tác phẩm sơn mài từ các nghệ sĩ trẻ.")
+                                .place(baoTangMyThuat)
+                                .startTime(LocalDateTime.of(2026, 5, 5, 9, 0))
+                                .endTime(LocalDateTime.of(2026, 5, 15, 17, 0))
+                        .build());
+            }
+
+            System.out.println(">>> SEED EVENTS SUCCESS!");
+
+        }
+
+
     }
 
     private void addPlaces(List<Place> list, String[] names, String desc, int price, double rate, Category c) {
@@ -188,4 +217,6 @@ public class DataInitializer implements CommandLineRunner {
                 .category(c)
                 .build();
     }
+
+
 }

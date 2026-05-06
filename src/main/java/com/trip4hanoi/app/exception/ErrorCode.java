@@ -65,7 +65,8 @@ public enum ErrorCode {
     USER_ALREADY_IN_BOX(1035, "User already in box", HttpStatus.BAD_REQUEST),
     USER_NOT_FOUND_IN_BOX(1036, "User not found in box", HttpStatus.NOT_FOUND),
     POST_ALREADY_SAVED(1037, "Post already saved", HttpStatus.BAD_REQUEST),
-    POST_NOT_SAVED(1038, "Post not saved", HttpStatus.NOT_FOUND);
+    POST_NOT_SAVED(1038, "Post not saved", HttpStatus.NOT_FOUND),
+    EVENT_NOT_FOUND(1037, "Event not found", HttpStatus.NOT_FOUND);
 
     private final int code;
     private final String message;

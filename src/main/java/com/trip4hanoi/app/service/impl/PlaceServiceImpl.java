@@ -39,9 +39,9 @@ public class PlaceServiceImpl implements PlaceService {
     public List<PlaceResponse> getAllPlaces(Long categoryId) {
         List<Place> places;
         if (categoryId != null) {
-            places = placeRepository.findByCategoryId(categoryId);
+            places = placeRepository.findByCategoryIdAndDeletedFalse(categoryId);
         } else {
-            places = placeRepository.findAll();
+            places = placeRepository.findAllByDeletedFalse();
         }
         return places.stream()
                 .map(placeMapper::toPlaceResponse)
@@ -51,6 +51,7 @@ public class PlaceServiceImpl implements PlaceService {
     @Override
     public PlaceDetailResponse getPlaceDetail(Long id) {
         Place place = placeRepository.findById(id)
+                .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
         return placeMapper.toPlaceDetailResponse(place);
     }
@@ -71,6 +72,7 @@ public class PlaceServiceImpl implements PlaceService {
     @Transactional
     public PlaceResponse updatePlace(Long id, PlaceRequest request) {
         Place place = placeRepository.findById(id)
+                .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
         
         placeMapper.updatePlace(place, request);
@@ -87,10 +89,11 @@ public class PlaceServiceImpl implements PlaceService {
     @Override
     @Transactional
     public void deletePlace(Long id) {
-        if (!placeRepository.existsById(id)) {
-            throw new AppException(ErrorCode.PLACE_NOT_FOUND);
-        }
-        placeRepository.deleteById(id);
+        Place place = placeRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+        
+        place.setDeleted(true);
+        placeRepository.save(place);
     }
 
     @Override

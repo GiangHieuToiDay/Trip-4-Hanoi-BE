@@ -18,4 +18,6 @@ public class ItineraryPlaceResponse {
     private Integer orderIndex;
     private String session;
     private Integer estimatedCost;
+
+    private EventResponse eventInfo; //Thông tin event nếu có
 }

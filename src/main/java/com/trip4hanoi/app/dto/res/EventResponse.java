@@ -15,4 +15,5 @@ public class EventResponse {
     private String placeName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private String status; // UPCOMING, ONGOING, ENDED
 }
