@@ -17,7 +17,7 @@ public class PlaceDetailResponse {
     private Double longitude;
     private Double ratingAvg;
     private Integer priceAvg;
-    private String imageUrl;
+    private List<ImageResponse> images; // Danh sách album ảnh
     private List<ReviewResponse> reviews;
     private List<EventResponse> events;
 }

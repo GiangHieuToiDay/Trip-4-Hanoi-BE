@@ -32,15 +32,15 @@ public class CloudinaryService {
             System.out.println("Cloudinary response: " + status);
 
             if ("ok".equals(status)) {
-                System.out.println("✅ Delete success: " + publicId);
+                System.out.println("Delete success: " + publicId);
             } else if ("not found".equals(status)) {
-                System.out.println("⚠️ Image not found (already deleted?): " + publicId);
+                System.out.println("Image not found (already deleted?): " + publicId);
             } else {
-                System.out.println("❌ Delete failed with status: " + status);
+                System.out.println("Delete failed with status: " + status);
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Exception when deleting: " + publicId);
+            System.out.println("Exception when deleting: " + publicId);
             e.printStackTrace();
         }
     }

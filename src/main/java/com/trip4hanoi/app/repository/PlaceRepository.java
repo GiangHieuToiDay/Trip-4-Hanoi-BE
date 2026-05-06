@@ -17,4 +17,6 @@ public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecifi
     List<Place> findByCategoryIdAndDeletedFalse(Long categoryId);
     List<Place> findAllByDeletedFalse();
     Optional<Place> findByNameAndDeletedFalse(String name);
+
+    Optional<Place> findByName(String name);
 }

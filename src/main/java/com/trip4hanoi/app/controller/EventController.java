@@ -10,8 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @RestController
 @RequestMapping("/api/events")
@@ -20,7 +21,7 @@ public class EventController {
     private final EventService eventService;
 
     /**
-     * ENDPOINT - USER (hiển thị event đáng và sắp diễn ra)
+     * ENDPOINT - USER: Lấy danh sách sự kiện đang và sắp diễn ra
      * @param keyword
      * @param placeId
      * @param page
@@ -44,6 +45,12 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * ENDPOINT - USER: Theo dõi sự kiện
+     * @param request
+     * @param userId
+     * @return
+     */
     @PostMapping("/follow")
     public ResponseEntity<APIResponse<String>> followEvent(
             @RequestBody EventFollowRequest request,
@@ -58,9 +65,17 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping
-    public ResponseEntity<APIResponse<EventResponse>> createEvent(@RequestBody EventRequest request) {
-        EventResponse event = eventService.createEvent(request);
+    /**
+     * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
+     * @param request
+     * @param images
+     * @return
+     */
+    @PostMapping(consumes = MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<APIResponse<EventResponse>> createEvent(
+            @RequestPart("data") EventRequest request,
+            @RequestPart(value = "images", required = false) MultipartFile[] images) {
+        EventResponse event = eventService.createEvent(request, images);
         return ResponseEntity.status(HttpStatus.CREATED).body(APIResponse.<EventResponse>builder()
                 .status(HttpStatus.CREATED.value())
                 .code(1000)
@@ -69,9 +84,19 @@ public class EventController {
                 .build());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<APIResponse<EventResponse>> updateEvent(@PathVariable Long id, @RequestBody EventRequest request) {
-        EventResponse event = eventService.updateEvent(id, request);
+    /**
+     * ENDPOINT - ADMIN: Cập nhật sự kiện và quản lý album ảnh
+     * @param id
+     * @param request
+     * @param images
+     * @return
+     */
+    @PutMapping(value = "/{id}", consumes =MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<APIResponse<EventResponse>> updateEvent(
+            @PathVariable Long id, 
+            @RequestPart("data") EventRequest request,
+            @RequestPart(value = "images", required = false) MultipartFile[] images) {
+        EventResponse event = eventService.updateEvent(id, request, images);
         return ResponseEntity.ok(APIResponse.<EventResponse>builder()
                 .status(HttpStatus.OK.value())
                 .code(1000)
@@ -80,6 +105,11 @@ public class EventController {
                 .build());
     }
 
+    /**
+     * ENDPOINT - ADMIN: Xóa mềm sự kiện
+     * @param id
+     * @return
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<APIResponse<Void>> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
@@ -91,7 +121,7 @@ public class EventController {
     }
 
     /**
-     * ENDPOINT - ADMIN
+     * ENDPOINT - ADMIN: Lấy tất cả sự kiện cho dashboard
      * @param keyword
      * @param placeId
      * @param page

@@ -2,6 +2,8 @@ package com.trip4hanoi.app.dto.res;
 
 import lombok.*;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,7 +22,8 @@ public class PlaceResponse {
     private Double ratingAvg;
     private Integer viewCount;
     private Integer favoriteCount;
-    private String imageUrl;
+    
+    private List<ImageResponse> images; // Danh sách album ảnh
 
 
     private Double distance;// khoảng cách giữa các điểm -  Tính bằng km
