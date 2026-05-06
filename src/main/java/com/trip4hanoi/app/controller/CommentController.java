@@ -3,6 +3,7 @@ package com.trip4hanoi.app.controller;
 import com.trip4hanoi.app.dto.req.CommentRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.CommentResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -64,13 +65,31 @@ public class CommentController {
     }
 
     @GetMapping("/post/{postId}")
-    public ResponseEntity<APIResponse<List<CommentResponse>>> getCommentsByPost(@PathVariable Long postId) {
-        List<CommentResponse> comments = commentService.getCommentsByPost(postId);
+    public ResponseEntity<APIResponse<PageResponse<CommentResponse>>> getCommentsByPost(
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageResponse<CommentResponse> comments = commentService.getCommentsByPost(postId, page, size);
         return ResponseEntity.ok(
-                APIResponse.<List<CommentResponse>>builder()
+                APIResponse.<PageResponse<CommentResponse>>builder()
                         .status(HttpStatus.OK.value())
                         .code(1000)
                         .message("Comments retrieved successfully")
+                        .data(comments)
+                        .build()
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<APIResponse<PageResponse<CommentResponse>>> getAllComments(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageResponse<CommentResponse> comments = commentService.getAllComments(page, size);
+        return ResponseEntity.ok(
+                APIResponse.<PageResponse<CommentResponse>>builder()
+                        .status(HttpStatus.OK.value())
+                        .code(1000)
+                        .message("All comments retrieved successfully")
                         .data(comments)
                         .build()
         );

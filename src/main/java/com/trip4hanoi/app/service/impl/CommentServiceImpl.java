@@ -2,6 +2,7 @@ package com.trip4hanoi.app.service.impl;
 
 import com.trip4hanoi.app.dto.req.CommentRequest;
 import com.trip4hanoi.app.dto.res.CommentResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.entity.Comment;
 import com.trip4hanoi.app.entity.Post;
 import com.trip4hanoi.app.entity.User;
@@ -15,6 +16,10 @@ import com.trip4hanoi.app.service.CommentService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,9 +79,28 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<CommentResponse> getCommentsByPost(Long postId) {
-        return commentRepository.findByPostIdOrderByCreatedAtDesc(postId).stream()
+    public PageResponse<CommentResponse> getCommentsByPost(Long postId, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<Comment> commentPage = commentRepository.findByPostId(postId, pageable);
+
+        List<CommentResponse> responses = commentPage.getContent().stream()
                 .map(commentMapper::toCommentResponse)
                 .collect(Collectors.toList());
+
+        return PageResponse.from(commentPage, responses);
+    }
+
+    @Override
+    public PageResponse<CommentResponse> getAllComments(int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<Comment> commentPage = commentRepository.findAll(pageable);
+
+        List<CommentResponse> responses = commentPage.getContent().stream()
+                .map(commentMapper::toCommentResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.from(commentPage, responses);
     }
 }
