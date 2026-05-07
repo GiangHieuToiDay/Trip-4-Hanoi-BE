@@ -20,7 +20,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +31,11 @@ import java.util.stream.Collectors;
 public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final UserEventFollowRepository userEventFollowRepository;
+    private final EventSubscriptionRepository eventSubscriptionRepository;
     private final UserRepository userRepository;
     private final PlaceRepository placeRepository;
     private final EventMapper eventMapper;
+    private final com.trip4hanoi.app.service.EventReminderService eventReminderService;
     private final com.trip4hanoi.app.service.CloudinaryService cloudinaryService;
 
     /**
@@ -74,7 +75,21 @@ public class EventServiceImpl implements EventService {
                 .build();
 
         userEventFollowRepository.save(follow);
+
+        // Tạo reminder subscription nếu chưa có
+        if (request.getNotifyBeforeMinutes() != null) {
+            if (!eventSubscriptionRepository.existsByUserIdAndEventIdAndNotifyBeforeMinutes(
+                    userId, request.getEventId(), request.getNotifyBeforeMinutes())) {
+                EventSubscription sub = new EventSubscription();
+                sub.setUserId(userId);
+                sub.setEventId(request.getEventId());
+                sub.setNotifyBeforeMinutes(request.getNotifyBeforeMinutes());
+                sub.setNotified(false);
+                eventSubscriptionRepository.save(sub);
+            }
+        }
     }
+
 
     /**
      * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
@@ -225,4 +240,5 @@ public class EventServiceImpl implements EventService {
 
         return PageResponse.from(eventPage, data);
     }
+
 }

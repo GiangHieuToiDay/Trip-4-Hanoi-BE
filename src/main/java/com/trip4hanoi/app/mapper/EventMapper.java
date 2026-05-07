@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 
 import java.time.LocalDateTime;
 
+
 import com.trip4hanoi.app.dto.res.ImageResponse;
 import com.trip4hanoi.app.entity.EventImage;
 import org.mapstruct.Mapper;
@@ -16,6 +17,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.time.LocalDateTime;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+
 public interface EventMapper {
 
     @Mapping(source = "place.id", target = "placeId")
@@ -34,10 +36,12 @@ public interface EventMapper {
     @Mapping(target = "place", ignore = true)
     @Mapping(target = "userEventFollows", ignore = true)
     @Mapping(target = "notifications", ignore = true)
+
     @Mapping(target = "images", ignore = true)
     void updateEvent(@org.mapstruct.MappingTarget Event event, EventRequest request);
 
     ImageResponse toImageResponse(EventImage image);
+
 
     /**
      * lấy thời gian thực (LocalDateTime.now()) để so sánh với thời điểm bắt đầu/kết thúc của sự kiện và trả status
@@ -45,12 +49,17 @@ public interface EventMapper {
      * @return
      */
     default String calculateStatus(Event event) {
+
+        LocalDateTime now = java.time.LocalDateTime.now();
+        if (now.isBefore(event.getStartTime())) return "UPCOMING";
+        if (now.isAfter(event.getEndTime())) return "ENDED";
+
         // Kiểm tra null để tránh NullPointerException khi startTime hoặc endTime chưa có dữ liệu
         if (event.getStartTime() == null || event.getEndTime() == null) {
             return "UPCOMING"; // Trạng thái mặc định nếu thiếu dữ liệu thời gian
         }
 
-        LocalDateTime now = java.time.LocalDateTime.now();
+        //LocalDateTime now = java.time.LocalDateTime.now();
 
         // So sánh an toàn sau khi đã check null
         if (now.isBefore(event.getStartTime())) return "UPCOMING";

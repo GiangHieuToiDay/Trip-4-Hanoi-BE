@@ -18,4 +18,5 @@ public class EventResponse {
     private LocalDateTime endTime;
     private String status; // UPCOMING, ONGOING, ENDED
     private List<ImageResponse> images; // Danh sách album ảnh
+
 }

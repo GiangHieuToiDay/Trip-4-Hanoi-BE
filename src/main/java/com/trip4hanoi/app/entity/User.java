@@ -54,6 +54,9 @@ public class User {
     @Column(name="verification_code", length = 255)
     private String verificationCode;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "tbl_user_role",
             joinColumns = @JoinColumn(name = "user_id"),

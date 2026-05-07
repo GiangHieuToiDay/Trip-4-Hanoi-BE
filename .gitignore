@@ -13,6 +13,9 @@ target/
 .springBeans
 .sts4-cache
 .env
+src/main/resources/trip4hanoi-1a2ba-firebase-adminsdk-fbsvc-29ccb30801.json
+src/main/resources/*.json
+
 ### IntelliJ IDEA ###
 .idea
 *.iws

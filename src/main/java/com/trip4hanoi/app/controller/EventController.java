@@ -17,11 +17,16 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class EventController {
     private final EventService eventService;
 
     /**
+<<<<<<< HEAD
+     * ENDPOINT - USER (hiển thị event đáng và sắp diễn ra)
+=======
      * ENDPOINT - USER: Lấy danh sách sự kiện đang và sắp diễn ra
+>>>>>>> origin/dev
      * @param keyword
      * @param placeId
      * @param page
@@ -45,6 +50,7 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+
     /**
      * ENDPOINT - USER: Theo dõi sự kiện
      * @param request
@@ -65,6 +71,7 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+
     /**
      * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
      * @param request
@@ -83,6 +90,7 @@ public class EventController {
                 .data(event)
                 .build());
     }
+
 
     /**
      * ENDPOINT - ADMIN: Cập nhật sự kiện và quản lý album ảnh
@@ -105,6 +113,7 @@ public class EventController {
                 .build());
     }
 
+
     /**
      * ENDPOINT - ADMIN: Xóa mềm sự kiện
      * @param id
@@ -121,6 +130,7 @@ public class EventController {
     }
 
     /**
+     * ENDPOINT - ADMIN
      * ENDPOINT - ADMIN: Lấy tất cả sự kiện cho dashboard
      * @param keyword
      * @param placeId
