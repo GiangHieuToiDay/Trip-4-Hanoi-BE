@@ -13,9 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.List;
+
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 
 @RestController
@@ -26,6 +29,11 @@ public class PlaceController {
    private final PlaceService placeService;
 
 
+   /**
+    * ENDPOINT - USER: Lấy danh sách địa điểm theo category
+    * @param categoryId
+    * @return
+    */
    @GetMapping
    public ResponseEntity<APIResponse<List<PlaceResponse>>> getAllPlaces(
            @RequestParam(required = false) Long categoryId) {
@@ -46,11 +54,8 @@ public class PlaceController {
    }
 
 
-
-
    /**
-    * ENDPOINT CHO USER: Tìm kiếm địa điểm (Có proximity, keyword , category)
-    * Sử dụng  @ModelAttribute ĐỂ map toàn bộ query params vào Object PlaceFilterRequest
+    * ENDPOINT - USER: Tìm kiếm địa điểm (Có proximity, keyword, category)
     * @param request
     * @return
     */
@@ -73,10 +78,8 @@ public class PlaceController {
    }
 
 
-
-
    /**
-    * ENDPOINT CHO DASHBOARD: Quản lý địa điểm (Ưu tiên sắp xếp , Lọc Admin)
+    * ENDPOINT - ADMIN: Quản lý địa điểm cho Dashboard (Ưu tiên sắp xếp, Lọc Admin)
     * @param keyword
     * @param categoryId
     * @param district
@@ -107,14 +110,11 @@ public class PlaceController {
    }
 
 
-
-
-
-
-
-
-
-
+   /**
+    * ENDPOINT - USER/ADMIN: Lấy chi tiết địa điểm kèm album ảnh
+    * @param id
+    * @return
+    */
    @GetMapping("/{id}")
    public ResponseEntity<APIResponse<PlaceDetailResponse>> getPlaceDetail(@PathVariable Long id) {
        PlaceDetailResponse place = placeService.getPlaceDetail(id);
@@ -131,10 +131,17 @@ public class PlaceController {
        return ResponseEntity.ok(response);
    }
 
-
-   @PostMapping
-   public ResponseEntity<APIResponse<PlaceResponse>> createPlace(@RequestBody PlaceRequest request) {
-       PlaceResponse place = placeService.createPlace(request);
+   /**
+    * ENDPOINT - ADMIN: Tạo địa điểm mới với album ảnh (Multipart)
+    * @param request
+    * @param images
+    * @return
+    */
+   @PostMapping(consumes = MULTIPART_FORM_DATA_VALUE)
+   public ResponseEntity<APIResponse<PlaceResponse>> createPlace(
+           @RequestPart("data") PlaceRequest request,
+           @RequestPart(value = "images", required = false) MultipartFile[] images) {
+       PlaceResponse place = placeService.createPlace(request, images);
 
 
        APIResponse<PlaceResponse> response = APIResponse.<PlaceResponse>builder()
@@ -148,10 +155,19 @@ public class PlaceController {
        return ResponseEntity.status(HttpStatus.CREATED).body(response);
    }
 
-
-   @PutMapping("/{id}")
-   public ResponseEntity<APIResponse<PlaceResponse>> updatePlace(@PathVariable Long id, @RequestBody PlaceRequest request) {
-       PlaceResponse place = placeService.updatePlace(id, request);
+   /**
+    * ENDPOINT - ADMIN: Cập nhật địa điểm và quản lý ảnh
+    * @param id
+    * @param request
+    * @param images
+    * @return
+    */
+   @PutMapping(value = "/{id}", consumes = MULTIPART_FORM_DATA_VALUE)
+   public ResponseEntity<APIResponse<PlaceResponse>> updatePlace(
+           @PathVariable Long id, 
+           @RequestPart("data") PlaceRequest request,
+           @RequestPart(value = "images", required = false) MultipartFile[] images) {
+       PlaceResponse place = placeService.updatePlace(id, request, images);
 
 
        APIResponse<PlaceResponse> response = APIResponse.<PlaceResponse>builder()

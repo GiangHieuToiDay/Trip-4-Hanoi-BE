@@ -32,6 +32,9 @@ public class Event {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EventImage> images; // Album ảnh của sự kiện này
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL)
     private List<UserEventFollow> userEventFollows;
 

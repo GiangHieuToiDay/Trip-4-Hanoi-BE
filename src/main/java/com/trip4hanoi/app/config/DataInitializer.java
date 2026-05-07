@@ -202,7 +202,7 @@ public class DataInitializer implements CommandLineRunner {
         String imageSeed = name.replaceAll("\\s+", "");
         String imageUrl = "https://picsum.photos/seed/" + imageSeed + "/800/600";
 
-        return Place.builder()
+        Place place = Place.builder()
                 .name(name)
                 .description(desc)
                 .address(address + ", " + district)
@@ -213,9 +213,17 @@ public class DataInitializer implements CommandLineRunner {
                 .ratingAvg(rate)
                 .viewCount((int) (Math.random() * 1000)) // Giả lập lượt xem từ 0-1000
                 .favoriteCount((int) (Math.random() * 200)) // Giả lập yêu thích từ 0-200
-                .imageUrl(imageUrl)
+                .images(new ArrayList<>())
                 .category(c)
                 .build();
+                
+        place.getImages().add(PlaceImage.builder()
+                .imageUrl(imageUrl)
+                .publicId("dummy_" + imageSeed)
+                .place(place)
+                .build());
+                
+        return place;
     }
 
 

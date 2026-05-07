@@ -2,6 +2,8 @@ package com.trip4hanoi.app.dto.req;
 
 import lombok.*;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,5 +18,6 @@ public class PlaceRequest {
     private Double longitude;
     private Integer priceAvg;
     private Double ratingAvg;
-    private String imageUrl;
+    
+    private List<Long> keepImageIds; // Danh sách ID ảnh cũ muốn giữ lại
 }
