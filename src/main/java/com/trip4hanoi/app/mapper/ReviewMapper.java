@@ -10,7 +10,7 @@ import org.mapstruct.Mapping;
 public interface ReviewMapper {
 
     @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.name", target = "userName")
+    @Mapping(source = "user.username", target = "userName")
     @Mapping(source = "place.id", target = "placeId")
     @Mapping(source = "place.name", target = "placeName")
     ReviewResponse toReviewResponse(Review review);

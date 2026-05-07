@@ -1,6 +1,6 @@
 package com.trip4hanoi.app.exception;
 
-import com.trip4hanoi.app.dto.ErrorResponse;
+
 import com.trip4hanoi.app.dto.res.APIResponse;
 import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;

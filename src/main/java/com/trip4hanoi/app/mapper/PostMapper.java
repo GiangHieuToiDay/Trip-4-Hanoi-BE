@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public interface PostMapper {
 
     @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.name", target = "userName")
+    @Mapping(source = "user.username", target = "userName")
     @Mapping(source = "images", target = "images")
     @Mapping(source = "places", target = "taggedPlaceIds", qualifiedByName = "mapPlacesToIds")
     @Mapping(target = "likeCount", expression = "java(post.getLikes() != null ? post.getLikes().size() : 0)")

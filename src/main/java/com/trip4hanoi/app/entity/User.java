@@ -4,7 +4,13 @@ import com.trip4hanoi.app.common.AuthProvider;
 import com.trip4hanoi.app.common.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -15,26 +21,26 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // ID người dùng
 
     @Column(nullable = false)
-    private String name; // Tên hiển thị
+    private String username; // Tên hiển thị
 
     @Column(nullable = false, unique = true)
     private String email; // Email đăng nhập
 
     @Column(nullable = false)
     private String password; // Mật khẩu (đã mã hóa)
-
+    @Column(columnDefinition = "TEXT")
+    private String avatar;
 
     private String nationality; // Quốc tịch
 
     private String language; // Ngôn ngữ ưu tiên
 
-    private String avatar;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt; // Ngày tạo tài khoản
@@ -94,5 +100,51 @@ public class User {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        Set<GrantedAuthority> authorities = new HashSet<>();
+
+        if(this.roles != null){
+
+            this.roles.forEach(role ->
+            {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+
+                if(role.getPermissions() != null){
+                    role.getPermissions().forEach(permission ->
+                            authorities.add(new SimpleGrantedAuthority(permission.getName())));
+                }
+            });
+        }
+
+
+        return authorities;
+    }
+
+    @Override
+    public String getUsername() {
+        return "";
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return UserDetails.super.isAccountNonExpired();
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return UserDetails.super.isAccountNonLocked();
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return UserDetails.super.isCredentialsNonExpired();
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return UserStatus.ACTIVE.equals(status);
     }
 }

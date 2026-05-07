@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -47,6 +48,7 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('MANAGE_CATEGORY')")
     public ResponseEntity<APIResponse<CategoryResponse>> createCategory(@RequestBody CategoryRequest request) {
         var result = categoryService.createCategory(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(APIResponse.<CategoryResponse>builder()
@@ -58,6 +60,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_CATEGORY')")
     public ResponseEntity<APIResponse<CategoryResponse>> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
         var result = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(APIResponse.<CategoryResponse>builder()
@@ -69,6 +72,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_CATEGORY')")
     public ResponseEntity<APIResponse<Void>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(APIResponse.<Void>builder()

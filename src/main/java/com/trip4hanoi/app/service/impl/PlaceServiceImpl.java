@@ -93,7 +93,7 @@ public class PlaceServiceImpl implements PlaceService {
             for (MultipartFile img : images) {
                 if (!img.isEmpty()) {
                     try {
-                        java.util.Map res = cloudinaryService.uploadFile(img);
+                        Map res = cloudinaryService.uploadFile(img);
                         place.getImages().add(PlaceImage.builder()
                                 .imageUrl(res.get("secure_url").toString())
                                 .publicId(res.get("public_id").toString())

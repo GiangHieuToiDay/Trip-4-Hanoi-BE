@@ -13,6 +13,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +31,7 @@ public class PostController {
     PostLikeService postLikeService;
 
     @PostMapping("/{id}/like")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> toggleLike(@PathVariable Long id) {
         postLikeService.toggleLike(id);
         return ResponseEntity.ok(
@@ -94,6 +96,7 @@ public class PostController {
     }
 
     @PostMapping(consumes = "multipart/form-data")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<PostResponse>> createPost(
             @Valid @RequestPart("data") PostRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
@@ -111,6 +114,7 @@ public class PostController {
     }
 
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<PostResponse>> updatePost(
             @PathVariable long id,
             @RequestPart("data") @Valid PostRequest request,
@@ -130,6 +134,7 @@ public class PostController {
 
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> deletePost(@PathVariable long id) {
 
         postService.deletePost(id);

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +31,7 @@ public class ItineraryController {
 
     //@Operation(summary = "Create itinerary", description = "API create itinerary for user")
     @PostMapping("/create")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> createItinerary(
             @Valid
             @RequestBody ItineraryRequest request,
@@ -78,6 +80,7 @@ public class ItineraryController {
 
     //@Operation(summary = "Get user itineraries", description = "API get all itineraries of a user")
     @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<List<ItineraryResponse>>> getUserItineraries(
             @RequestHeader("User-Id") Long userId) {
 
@@ -143,6 +146,7 @@ public class ItineraryController {
     }
 
     @DeleteMapping("/remove-itinerary/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> removeItinerary(
             @PathVariable Long id) {
 

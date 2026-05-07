@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class CommentController {
     CommentService commentService;
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<CommentResponse>> createComment(@Valid @RequestBody CommentRequest request) {
         CommentResponse comment = commentService.createComment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -37,6 +39,7 @@ public class CommentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<CommentResponse>> updateComment(
             @PathVariable Long id,
             @RequestBody String content) {
@@ -52,6 +55,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> deleteComment(@PathVariable Long id) {
         commentService.deleteComment(id);
         return ResponseEntity.ok(
