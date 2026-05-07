@@ -11,6 +11,13 @@ public enum ErrorCode {
     // SYSTEM ERRORS
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(8888, "Invalid message key", HttpStatus.BAD_REQUEST),
+    PERMISSION_NOT_FOUND(1006, "Permission not found", HttpStatus.NOT_FOUND),
+    ROLE_NOT_FOUND(1007, "Role not found", HttpStatus.NOT_FOUND),
+    ROLE_EXISTED(1024, "Role already exists", HttpStatus.CONFLICT),
+    PERMISSION_EXISTED(1025, "Permission already exists", HttpStatus.CONFLICT),
+    UNAUTHENTICATED(1020, "UNAUTHENTICATED", HttpStatus.UNAUTHORIZED),
+    EMAIL_EXISTED(1003, "Email already exists", HttpStatus.CONFLICT),
+    USER_EXISTED(1002, "User already exists", HttpStatus.CONFLICT),
 
     // USER ERRORS
     USER_NOT_FOUND(1001, "User not found", HttpStatus.NOT_FOUND),

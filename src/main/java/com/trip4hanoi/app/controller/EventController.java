@@ -9,6 +9,7 @@ import com.trip4hanoi.app.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -53,11 +54,9 @@ public class EventController {
 
     /**
      * ENDPOINT - USER: Theo dõi sự kiện
-     * @param request
-     * @param userId
-     * @return
      */
     @PostMapping("/follow")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<String>> followEvent(
             @RequestBody EventFollowRequest request,
             @RequestHeader("User-Id") Long userId) {
@@ -74,11 +73,9 @@ public class EventController {
 
     /**
      * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
-     * @param request
-     * @param images
-     * @return
      */
     @PostMapping(consumes = MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('MANAGE_EVENT')")
     public ResponseEntity<APIResponse<EventResponse>> createEvent(
             @RequestPart("data") EventRequest request,
             @RequestPart(value = "images", required = false) MultipartFile[] images) {
@@ -94,12 +91,9 @@ public class EventController {
 
     /**
      * ENDPOINT - ADMIN: Cập nhật sự kiện và quản lý album ảnh
-     * @param id
-     * @param request
-     * @param images
-     * @return
      */
     @PutMapping(value = "/{id}", consumes =MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('MANAGE_EVENT')")
     public ResponseEntity<APIResponse<EventResponse>> updateEvent(
             @PathVariable Long id, 
             @RequestPart("data") EventRequest request,
@@ -116,10 +110,9 @@ public class EventController {
 
     /**
      * ENDPOINT - ADMIN: Xóa mềm sự kiện
-     * @param id
-     * @return
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_EVENT')")
     public ResponseEntity<APIResponse<Void>> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
         return ResponseEntity.ok(APIResponse.<Void>builder()
@@ -132,13 +125,9 @@ public class EventController {
     /**
      * ENDPOINT - ADMIN
      * ENDPOINT - ADMIN: Lấy tất cả sự kiện cho dashboard
-     * @param keyword
-     * @param placeId
-     * @param page
-     * @param size
-     * @return
      */
     @GetMapping("/admin")
+    @PreAuthorize("hasAuthority('MANAGE_EVENT')")
     public ResponseEntity<APIResponse<PageResponse<EventResponse>>> getAllEventsAdmin(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long placeId,

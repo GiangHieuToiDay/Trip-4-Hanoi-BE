@@ -1,0 +1,9 @@
+services:
+  redis:
+    image: redis:8.0
+    container_name: redis-trip4-hanoi
+    ports:
+      - "6379:6379"
+    command: redis-server --notify-keyspace-events Ex
+
+

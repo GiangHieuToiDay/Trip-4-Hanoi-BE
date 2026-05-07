@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -80,15 +81,9 @@ public class PlaceController {
 
    /**
     * ENDPOINT - ADMIN: Quản lý địa điểm cho Dashboard (Ưu tiên sắp xếp, Lọc Admin)
-    * @param keyword
-    * @param categoryId
-    * @param district
-    * @param sort
-    * @param page
-    * @param size
-    * @return
     */
    @GetMapping("/admin")
+   @PreAuthorize("hasAuthority('MANAGE_PLACE')")
    public ResponseEntity<APIResponse<PageResponse<PlaceResponse>>> getAllPlacesAdmin(
            @RequestParam(required = false) String keyword,
            @RequestParam(required = false) Long categoryId,
@@ -112,8 +107,6 @@ public class PlaceController {
 
    /**
     * ENDPOINT - USER/ADMIN: Lấy chi tiết địa điểm kèm album ảnh
-    * @param id
-    * @return
     */
    @GetMapping("/{id}")
    public ResponseEntity<APIResponse<PlaceDetailResponse>> getPlaceDetail(@PathVariable Long id) {
@@ -133,11 +126,9 @@ public class PlaceController {
 
    /**
     * ENDPOINT - ADMIN: Tạo địa điểm mới với album ảnh (Multipart)
-    * @param request
-    * @param images
-    * @return
     */
    @PostMapping(consumes = MULTIPART_FORM_DATA_VALUE)
+   @PreAuthorize("hasAuthority('MANAGE_PLACE')")
    public ResponseEntity<APIResponse<PlaceResponse>> createPlace(
            @RequestPart("data") PlaceRequest request,
            @RequestPart(value = "images", required = false) MultipartFile[] images) {
@@ -157,12 +148,9 @@ public class PlaceController {
 
    /**
     * ENDPOINT - ADMIN: Cập nhật địa điểm và quản lý ảnh
-    * @param id
-    * @param request
-    * @param images
-    * @return
     */
    @PutMapping(value = "/{id}", consumes = MULTIPART_FORM_DATA_VALUE)
+   @PreAuthorize("hasAuthority('MANAGE_PLACE')")
    public ResponseEntity<APIResponse<PlaceResponse>> updatePlace(
            @PathVariable Long id, 
            @RequestPart("data") PlaceRequest request,
@@ -183,6 +171,7 @@ public class PlaceController {
 
 
    @DeleteMapping("/{id}")
+   @PreAuthorize("hasAuthority('MANAGE_PLACE')")
    public ResponseEntity<APIResponse<Void>> deletePlace(@PathVariable Long id) {
        placeService.deletePlace(id);
 
