@@ -13,6 +13,9 @@ public class PlaceSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // lọc bỏ địa điểm đã xóa
+            predicates.add(cb.equal(root.get("deleted"), false));
+
             // 1. Lọc theo từ khóa
             if (request.getKeyword() != null && !request.getKeyword().trim().isEmpty()) {
                 String keyword = request.getKeyword().trim().toLowerCase();

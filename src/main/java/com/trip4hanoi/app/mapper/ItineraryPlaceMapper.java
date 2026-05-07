@@ -6,7 +6,7 @@ import com.trip4hanoi.app.entity.ItineraryPlace;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {EventMapper.class})
 public interface ItineraryPlaceMapper {
 
     @Mapping(source = "place.id", target = "placeId")
@@ -15,11 +15,13 @@ public interface ItineraryPlaceMapper {
     @Mapping(source = "place.latitude", target = "latitude")
     @Mapping(source = "place.longitude", target = "longitude")
     @Mapping(source = "place.address", target = "address")
+    @Mapping(source = "event", target = "eventInfo")
     ItineraryPlaceResponse toItineraryPlaceResponse(ItineraryPlace itineraryPlace);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "itinerary", ignore = true)
     @Mapping(target = "place", ignore = true)
     @Mapping(target = "session", ignore = true)
+    @Mapping(target = "event", ignore = true)
     ItineraryPlace toItineraryPlace(ItineraryPlaceRequest request);
 }

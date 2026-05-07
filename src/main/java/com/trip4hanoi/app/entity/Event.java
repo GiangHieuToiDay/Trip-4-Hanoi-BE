@@ -37,4 +37,7 @@ public class Event {
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL)
     private List<Notification> notifications;
+
+    @Builder.Default
+    private boolean deleted = false;
 }

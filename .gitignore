@@ -13,6 +13,8 @@ target/
 .springBeans
 .sts4-cache
 .env
+src/main/resources/firebase-service-account.json
+src/main/resources/*.json
 
 ### IntelliJ IDEA ###
 .idea

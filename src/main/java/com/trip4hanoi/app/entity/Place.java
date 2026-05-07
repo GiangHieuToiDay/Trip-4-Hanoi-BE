@@ -66,4 +66,7 @@ public class Place {
 
     @ManyToMany(mappedBy = "places")
     private List<Post> posts; // Các bài đăng tag địa điểm này
+
+    @Builder.Default
+    private boolean deleted = false;
 }
