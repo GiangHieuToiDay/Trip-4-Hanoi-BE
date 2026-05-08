@@ -50,7 +50,7 @@ public interface EventMapper {
      */
     default String calculateStatus(Event event) {
 
-        LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(event.getStartTime())) return "UPCOMING";
         if (now.isAfter(event.getEndTime())) return "ENDED";
 
@@ -59,7 +59,7 @@ public interface EventMapper {
             return "UPCOMING"; // Trạng thái mặc định nếu thiếu dữ liệu thời gian
         }
 
-        //LocalDateTime now = java.time.LocalDateTime.now();
+
 
         // So sánh an toàn sau khi đã check null
         if (now.isBefore(event.getStartTime())) return "UPCOMING";

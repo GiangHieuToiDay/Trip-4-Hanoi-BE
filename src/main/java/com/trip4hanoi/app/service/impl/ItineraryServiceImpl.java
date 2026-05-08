@@ -6,6 +6,7 @@ import com.trip4hanoi.app.dto.req.ItineraryRequest;
 import com.trip4hanoi.app.dto.req.ItineraryUpdateFullRequest;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
+import com.trip4hanoi.app.dto.res.PlaceResponse;
 import com.trip4hanoi.app.entity.*;
 import com.trip4hanoi.app.exception.AppException;
 import com.trip4hanoi.app.exception.ErrorCode;
@@ -13,18 +14,19 @@ import com.trip4hanoi.app.mapper.ItineraryMapper;
 import com.trip4hanoi.app.mapper.ItineraryPlaceMapper;
 import com.trip4hanoi.app.repository.*;
 import com.trip4hanoi.app.service.ItineraryService;
+import com.trip4hanoi.app.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j(topic = "ITINERARY-SERVICE")
 public class ItineraryServiceImpl implements ItineraryService {
     private final ItineraryRepository itineraryRepository;
     private final ItineraryPlaceRepository itineraryPlaceRepository;
@@ -32,9 +34,11 @@ public class ItineraryServiceImpl implements ItineraryService {
     private final PlaceRepository placeRepository;
     private final UserPreferenceRepository userPreferenceRepository;
     private final CategoryRepository categoryRepository;
+    private final RecommendationService recommendationService; // Kết nối với dịch vụ gợi ý thông minh
     private final ItineraryMapper itineraryMapper;
     private final ItineraryPlaceMapper itineraryPlaceMapper;
     private final EventRepository eventRepository;
+    private final UserLocationHistoryRepository userLocationHistoryRepository;
 
     @Override
     @Transactional
@@ -42,13 +46,12 @@ public class ItineraryServiceImpl implements ItineraryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if( itineraryRepository.existsByTitleIgnoreCase(request.getTitle())) {
-            throw new AppException(ErrorCode.TITLE_EXIST);
-        }
-
         String trimmedTitle = request.getTitle() != null ? request.getTitle().trim() : "My Itinerary";
+        
+        // Tìm lịch trình cũ của chính User này có cùng tên (nếu có)
         Itinerary itinerary = itineraryRepository.findByUserIdAndTitleIgnoreCase(userId, trimmedTitle)
                 .orElseGet(() -> {
+                    // Nếu không thấy, mới tạo đối tượng mới
                     Itinerary newItinerary = itineraryMapper.toItinerary(request);
                     newItinerary.setTitle(trimmedTitle);
                     newItinerary.setUser(user);
@@ -86,14 +89,27 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         //Chỉ lấy những địa điểm chưa bị xóa
         List<Place> allPossiblePlaces = placeRepository.findAllByDeletedFalse();
-        List<ItineraryPlace> itineraryPlaces = new java.util.ArrayList<>();
+
+        // Gợi ý thông minh
+        List<PlaceResponse> recommendedPlaces = recommendationService.getPersonalizedRecommendations(50);
+        Set<Long> recommendedIds = recommendedPlaces.stream().map(PlaceResponse::getId).collect(Collectors.toSet());
+
+        // Lấy vị trí gần nhất của user làm điểm khởi hành
+        var history = userLocationHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        Double userLat = history.isEmpty() ? null : history.get(0).getLatitude();
+        Double userLon = history.isEmpty() ? null : history.get(0).getLongitude();
+
+        List<ItineraryPlace> itineraryPlaces = new ArrayList<>();
         List<Place> usedPlaces = new java.util.ArrayList<>();
-        java.util.Random random = new java.util.Random();
+        Random random = new Random();
 
         String[] sessionNames = {"Morning", "Noon", "Afternoon", "Evening"};
 
         for (int day = 1; day <= numDays; day++) {
             int orderInDay = 1;
+            Double lastLat = (day == 1) ? userLat : null;
+            Double lastLon = (day == 1) ? userLon : null;
+
             for (String session : sessionNames) {
                 double sessionBudgetRatio = session.equals("Evening") ? 0.35 : 0.216;
                 double currentSessionBudget = dailyBudget * sessionBudgetRatio;
@@ -103,12 +119,14 @@ public class ItineraryServiceImpl implements ItineraryService {
                 int placesPerSession = (numPeople >= 3) ? 3 : 2;
 
                 String lastCategoryName = "";
-                java.util.Map<String, Integer> sessionCategoryCounts = new java.util.HashMap<>();
+                Map<String, Integer> sessionCategoryCounts = new HashMap<>();
 
                 for (int p = 0; p < placesPerSession; p++) {
                     final String finalLastCategory = lastCategoryName;
                     final int slotIndex = p;
                     final String currentSession = session;
+                    final Double currentLastLat = lastLat;
+                    final Double currentLastLon = lastLon;
                     
                     // Xác định target category cho từng slot
                     List<String> slotTargets = getStrictTargets(currentSession, slotIndex);
@@ -145,7 +163,22 @@ public class ItineraryServiceImpl implements ItineraryService {
                                 int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
                                 double budgetFit = 1.0 - Math.min(1.0, Math.abs(price - budgetPerPlaceTarget) / (budgetPerPlaceTarget + 1));
                                 
-                                double totalScore = 0.4 * prefMatch + 0.3 * ratingScore + 0.3 * budgetFit;
+                                // Ưu tiên gợi ý thông minh
+                                double recBonus = recommendedIds.contains(pl.getId()) ? 1.0 : 0.0;
+
+                                // Ưu tiên theo khoảng cách
+                                double distanceScore = 0.0;
+                                if (currentLastLat != null && currentLastLon != null) {
+                                    Double dist = calculateDistance(currentLastLat, currentLastLon, pl.getLatitude(), pl.getLongitude());
+                                    if (dist != null) {
+                                        distanceScore = 1.0 / (1.0 + dist);
+                                    }
+                                }
+
+                                // Tăng trọng số khoảng cách để tránh đi lòng vòng
+                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.1 * budgetFit + 0.5 * distanceScore + 0.5 * recBonus;
+
+                                log.info("Place: {} | Total: {} | DistScore: {} | Rec: {}", pl.getName(), totalScore, distanceScore, recBonus > 0);
 
                                 //Kiểm tra Event Bonus
                                 double eventBonus = 0.0;
@@ -155,15 +188,16 @@ public class ItineraryServiceImpl implements ItineraryService {
                                     // Kiểm tra xem travelDate có nằm trong khoảng diễn ra event không
                                     if(!travelDate.isBefore(ev.getStartTime().toLocalDate()) &&
                                     !travelDate.isAfter(ev.getEndTime().toLocalDate())) {
-                                        eventBonus = 1.0; // cộng hẳn 1 điểm
+                                        // Bonus điểm sự kiện nhưng có tính đến khoảng cách (xa quá thì giảm ham muốn)
+                                        eventBonus = (currentLastLat != null) ? 1.0 / (1.0 + (calculateDistance(currentLastLat, currentLastLon, pl.getLatitude(), pl.getLongitude()) / 5.0)) : 1.0;
                                         foundEvent = ev;
                                         break;
                                     }
                                 }
-                                return new PlaceScore(pl, totalScore +eventBonus, foundEvent);
+                                return new PlaceScore(pl, totalScore + eventBonus, foundEvent);
                             })
                             .sorted(Comparator.comparingDouble(PlaceScore::getScore).reversed())
-                            .limit(5)
+                            .limit(3)
                             .collect(Collectors.toList());
 
                     //chọn ngẫu nhiên
@@ -173,6 +207,9 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     
                     usedPlaces.add(foundPlace);
+                    lastLat = foundPlace.getLatitude();
+                    lastLon = foundPlace.getLongitude();
+
                     String chosenCat = foundPlace.getCategory().getName();
                     lastCategoryName = chosenCat;
                     sessionCategoryCounts.put(chosenCat, sessionCategoryCounts.getOrDefault(chosenCat, 0) + 1);
@@ -197,6 +234,20 @@ public class ItineraryServiceImpl implements ItineraryService {
         Itinerary savedItinerary = itineraryRepository.save(itinerary);
 
         return itineraryMapper.toItineraryResponse(savedItinerary);
+    }
+
+    private Double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+            return null;
+        }
+        double R = 6371; // km
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c * 100.0) / 100.0;
     }
 
     private List<String> getStrictTargets(String session, int slotIndex) {

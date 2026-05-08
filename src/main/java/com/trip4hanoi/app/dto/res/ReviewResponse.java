@@ -18,6 +18,6 @@ public class ReviewResponse {
     private String comment;
     private String imageUrl;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", timezone = "Asia/Ho_Chi_Minh")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime createdAt;
 }

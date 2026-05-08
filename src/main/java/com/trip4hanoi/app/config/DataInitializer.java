@@ -29,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserLocationHistoryRepository userLocationHistoryRepository;
 
     @Value("${app.init.admin-password:123456}")
     private String adminPassword;
@@ -51,7 +52,104 @@ public class DataInitializer implements CommandLineRunner {
             createTravelData();
         }
 
+        // Khởi tạo User Preference cho user@gmail.com để test isRecommended
+        initUserPreferences();
+
+        // Khởi tạo dữ liệu Test chuyên sâu cho Itinerary Logic
+        initTestData();
+
         log.info("Data Initialization Completed Successfully!");
+    }
+
+    private void initTestData() {
+        String testEmail = "tester@gmail.com";
+        if (userRepository.existsByEmail(testEmail)) return;
+
+        log.info("Initializing specialized test data for Itinerary Logic...");
+
+        // 1. Tạo User Test
+        Role userRole = roleRepository.findByName("USER").orElseThrow();
+        User tester = User.builder()
+                .username("SmartTester")
+                .email(testEmail)
+                .password(passwordEncoder.encode("123456"))
+                .roles(Set.of(userRole))
+                .provider(AuthProvider.LOCAL)
+                .status(UserStatus.ACTIVE)
+                .build();
+        userRepository.save(tester);
+
+        // 2. Thiết lập sở thích: Du lịch và Cafe
+        Category travel = getOrCreateCategory("Địa điểm du lịch");
+        Category cafe = getOrCreateCategory("Cafe");
+        Category food = getOrCreateCategory("Ẩm thực");
+
+        userPreferenceRepository.save(UserPreference.builder().user(tester).category(travel).build());
+        userPreferenceRepository.save(UserPreference.builder().user(tester).category(cafe).build());
+
+        // 3. Giả lập vị trí: User đang ở Cầu Giấy (Tòa nhà Keangnam)
+        // Lat: 21.0173, Lng: 105.7841
+        userLocationHistoryRepository.save(UserLocationHistory.builder()
+                .user(tester)
+                .latitude(21.0173)
+                .longitude(105.7841)
+                .district("Cầu Giấy")
+                .actionType("BACKGROUND")
+                .createdAt(LocalDateTime.now())
+                .build());
+
+        // 4. Tạo địa điểm ở Cầu Giấy (Gần User - Sẽ có điểm Distance cao)
+        List<Place> testPlaces = new ArrayList<>();
+        
+        // Cafe gần Keangnam (Cầu Giấy)
+        testPlaces.add(createTestPlace("Highlands Keangnam", "Cafe gần chỗ ở", 21.0175, 105.7845, "Cầu Giấy", cafe, 4.5));
+        // Công viên Cầu Giấy (Du lịch gần đó)
+        testPlaces.add(createTestPlace("Công viên Cầu Giấy", "Điểm dạo mát gần User", 21.0205, 105.7915, "Cầu Giấy", travel, 4.7));
+        // Nhà hàng ở Cầu Giấy
+        testPlaces.add(createTestPlace("Cơm Niêu Thúy Nga", "Ăn trưa gần Keangnam", 21.0255, 105.8015, "Cầu Giấy", food, 4.2));
+
+        // 5. Tạo địa điểm ở Hoàn Kiếm (Xa User - Sẽ có điểm Distance thấp)
+        testPlaces.add(createTestPlace("Kem Tràng Tiền", "Rất xa Cầu Giấy", 21.0245, 105.8545, "Hoàn Kiếm", food, 4.8));
+        testPlaces.add(createTestPlace("Nhà Thờ Lớn", "Điểm tham quan xa", 21.0285, 105.8495, "Hoàn Kiếm", travel, 4.9));
+
+        placeRepository.saveAll(testPlaces);
+        log.info("Specialized test data initialized for tester@gmail.com");
+    }
+
+    private Place createTestPlace(String name, String desc, double lat, double lng, String dist, Category cat, double rate) {
+        Place p = Place.builder()
+                .name(name)
+                .description(desc)
+                .address(dist + ", Hà Nội")
+                .district(dist)
+                .latitude(lat)
+                .longitude(lng)
+                .priceAvg(50000)
+                .ratingAvg(rate)
+                .category(cat)
+                .images(new ArrayList<>())
+                .build();
+        
+        p.getImages().add(PlaceImage.builder()
+                .imageUrl("https://picsum.photos/800/600?random=" + name.hashCode())
+                .publicId("test_" + UUID.randomUUID())
+                .place(p)
+                .build());
+        return p;
+    }
+
+    private void initUserPreferences() {
+        userRepository.findByEmail("user@gmail.com").ifPresent(user -> {
+            if (userPreferenceRepository.findByUserId(user.getId()).isEmpty()) {
+                categoryRepository.findByName("Ẩm thực").ifPresent(cat -> {
+                    userPreferenceRepository.save(UserPreference.builder()
+                            .user(user)
+                            .category(cat)
+                            .build());
+                    log.info("Set 'Ẩm thực' as preference for user@gmail.com");
+                });
+            }
+        });
     }
 
     private void createPermissions() {
@@ -159,18 +257,22 @@ public class DataInitializer implements CommandLineRunner {
         // Cafe (Mẫu)
         addPlaces(all, new String[]{"Cộng Cà Phê", "The Note Coffee", "Cafe Giảng"}, "Không gian cafe cực chill", 45000, 4.4, cafe);
 
+        // Thêm dữ liệu ở Quận khác (Tây Hồ) để test Hot Zone
+        addPlacesInDistrict(all, new String[]{"Sen Tây Hồ", "Nhà hàng 6 Degrees"}, "View Hồ Tây cực đẹp", 150000, 4.8, food, "Tây Hồ");
+
         placeRepository.saveAll(all);
 
         // Events
-        Place vanMieu = placeRepository.findByName("Phở Thìn Bờ Hồ").orElse(null); // Demo gắn vào 1 địa điểm
-        if (vanMieu != null) {
+        Place phoThin = placeRepository.findByName("Phở Thìn Bờ Hồ").orElse(null);
+        if (phoThin != null) {
             eventRepository.save(Event.builder()
                     .name("Lễ hội Ẩm thực Hà Nội 2026")
                     .description("Sự kiện hội tụ các tinh hoa ẩm thực đường phố.")
-                    .place(vanMieu)
-                    .startTime(LocalDateTime.now().plusDays(5))
-                    .endTime(LocalDateTime.now().plusDays(10))
+                    .place(phoThin)
+                    .startTime(LocalDateTime.now().minusDays(1)) // Bắt đầu từ hôm qua
+                    .endTime(LocalDateTime.now().plusDays(7))   // Kết thúc sau 7 ngày
                     .build());
+            log.info("Created active event for 'Phở Thìn Bờ Hồ'");
         }
 
         log.info("Travel data seeded success!");
@@ -196,6 +298,31 @@ public class DataInitializer implements CommandLineRunner {
                     .images(new ArrayList<>())
                     .build();
 
+
+            String dummyPublicId = "dummy_" + UUID.randomUUID().toString().substring(0, 8);
+            p.getImages().add(PlaceImage.builder()
+                    .imageUrl("https://picsum.photos/800/600")
+                    .publicId(dummyPublicId)
+                    .place(p)
+                    .build());
+            list.add(p);
+        }
+    }
+
+    private void addPlacesInDistrict(List<Place> list, String[] names, String desc, int price, double rate, Category c, String district) {
+        for (String name : names) {
+            Place p = Place.builder()
+                    .name(name)
+                    .description(desc)
+                    .address("Hà Nội")
+                    .district(district)
+                    .latitude(21.0585 + (Math.random() * 0.01))
+                    .longitude(105.8227 + (Math.random() * 0.01))
+                    .priceAvg(price)
+                    .ratingAvg(rate)
+                    .category(c)
+                    .images(new ArrayList<>())
+                    .build();
 
             String dummyPublicId = "dummy_" + UUID.randomUUID().toString().substring(0, 8);
             p.getImages().add(PlaceImage.builder()

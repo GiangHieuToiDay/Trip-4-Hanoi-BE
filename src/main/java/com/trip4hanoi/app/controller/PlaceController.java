@@ -109,8 +109,12 @@ public class PlaceController {
     * ENDPOINT - USER/ADMIN: Lấy chi tiết địa điểm kèm album ảnh
     */
    @GetMapping("/{id}")
-   public ResponseEntity<APIResponse<PlaceDetailResponse>> getPlaceDetail(@PathVariable Long id) {
-       PlaceDetailResponse place = placeService.getPlaceDetail(id);
+   public ResponseEntity<APIResponse<PlaceDetailResponse>> getPlaceDetail(
+           @PathVariable Long id,
+           @RequestParam(required = false) Double userLat,
+           @RequestParam(required = false) Double userLng
+   ) {
+       PlaceDetailResponse place = placeService.getPlaceDetail(id, userLat, userLng);
 
 
        APIResponse<PlaceDetailResponse> response = APIResponse.<PlaceDetailResponse>builder()

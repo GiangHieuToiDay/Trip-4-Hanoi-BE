@@ -29,4 +29,5 @@ public class UserUpdateRequest {
     private String avatar;
     private UserStatus status;
     private Set<Long> roles;
+    private Boolean isLocationTrackingEnabled;
 }

@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface PlaceService {
     List<PlaceResponse> getAllPlaces(Long categoryId);
-    PlaceDetailResponse getPlaceDetail(Long id);
+    PlaceDetailResponse getPlaceDetail(Long id, Double userLat, Double userLng);
     PlaceResponse createPlace(PlaceRequest request, MultipartFile[] images);
     PlaceResponse updatePlace(Long id, PlaceRequest request, MultipartFile[] images);
     void deletePlace(Long id);

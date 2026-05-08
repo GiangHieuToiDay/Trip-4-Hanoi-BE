@@ -14,20 +14,22 @@ import com.trip4hanoi.app.mapper.PlaceMapper;
 import com.trip4hanoi.app.repository.CategoryRepository;
 import com.trip4hanoi.app.repository.PlaceRepository;
 import com.trip4hanoi.app.repository.PlaceSpecification;
+import com.trip4hanoi.app.repository.UserPreferenceRepository;
 import com.trip4hanoi.app.service.PlaceService;
+import com.trip4hanoi.app.service.UserLocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 public class PlaceServiceImpl implements PlaceService {
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
+    private final UserPreferenceRepository userPreferenceRepository;
+    private final UserLocationService userLocationService;
     private final PlaceMapper placeMapper;
     private final com.trip4hanoi.app.service.CloudinaryService cloudinaryService;
 
@@ -52,8 +56,15 @@ public class PlaceServiceImpl implements PlaceService {
         } else {
             places = placeRepository.findAllByDeletedFalse();
         }
+
+        Set<Long> preferredCategoryIds = getPreferredCategoryIds();
+
         return places.stream()
-                .map(placeMapper::toPlaceResponse)
+                .map(place -> {
+                    PlaceResponse res = placeMapper.toPlaceResponse(place);
+                    enrichPlaceResponse(res, place, preferredCategoryIds);
+                    return res;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -63,11 +74,21 @@ public class PlaceServiceImpl implements PlaceService {
      * @return
      */
     @Override
-    public PlaceDetailResponse getPlaceDetail(Long id) {
+    public PlaceDetailResponse getPlaceDetail(Long id, Double userLat, Double userLng) {
         Place place = placeRepository.findById(id)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
-        return placeMapper.toPlaceDetailResponse(place);
+
+        PlaceDetailResponse res = placeMapper.toPlaceDetailResponse(place);
+        enrichPlaceDetailResponse(res, place, getPreferredCategoryIds());
+
+        // Nếu có tọa độ, tính khoảng cách và lưu vết
+        if (userLat != null && userLng != null) {
+            res.setDistance(calculateHaversine(userLat, userLng, place.getLatitude(), place.getLongitude()));
+            userLocationService.saveCurrentLocation(getCurrentUserId(), userLat, userLng, "VIEW_DETAIL", place.getDistrict());
+        }
+
+        return res;
     }
 
     /**
@@ -219,8 +240,13 @@ public class PlaceServiceImpl implements PlaceService {
         //Trường hợp 1: Không có tọa độ (Lọc cơ bản)
         if(request.getUserLat() == null || request.getUserLng() == null){
             Page<Place> placePage = placeRepository.findAll(spec,pageable);
+            Set<Long> preferredCategoryIds = getPreferredCategoryIds();
             List<PlaceResponse> data = placePage.getContent().stream()
-                    .map(placeMapper ::toPlaceResponse)
+                    .map(place -> {
+                        PlaceResponse res = placeMapper.toPlaceResponse(place);
+                        enrichPlaceResponse(res, place, preferredCategoryIds);
+                        return res;
+                    })
                     .collect(Collectors.toList());
             return  PageResponse.from(placePage,data);
         }
@@ -230,6 +256,10 @@ public class PlaceServiceImpl implements PlaceService {
         //vì tính khoảng cách cần tất cả kết quả để lọc radius và sắp xếp,
         // ta lấy hết List phù hợp spec về Java xử lý
         List<Place> allMatches = placeRepository.findAll(spec);
+        Set<Long> preferredCategoryIds = getPreferredCategoryIds();
+
+        // Lưu vết lịch sử vị trí nếu là User đã đăng nhập
+        userLocationService.saveCurrentLocation(getCurrentUserId(), request.getUserLat(), request.getUserLng(), "SEARCH", request.getDistrict());
 
         List<PlaceResponse> allResponses =  allMatches.stream()
                 .map(place -> {
@@ -238,7 +268,7 @@ public class PlaceServiceImpl implements PlaceService {
 
                     res.setDistance(dist);// dist có thể là null nếu dữ liệu DB thiếu
 
-                    //[TODO: USER_AUTH] sau check UserPreference ở  đây để set isRecommended
+                    enrichPlaceResponse(res, place, preferredCategoryIds);
                     return res;
                 })
 
@@ -266,6 +296,8 @@ public class PlaceServiceImpl implements PlaceService {
 
 
     }
+
+
 
     @Override
     public PageResponse<PlaceResponse> getAllPlacesForAdmin(String keyword, Long categoryId, String district, String sort, int page, int size) {
@@ -335,5 +367,54 @@ public class PlaceServiceImpl implements PlaceService {
         return Math.round(R * c * 100.0) / 100.0;
     }
 
+
+    private void enrichPlaceResponse(PlaceResponse dto, Place entity, Set<Long> preferredIds) {
+        //  Check Recommended
+        if (preferredIds.contains(entity.getCategory().getId())) {
+            dto.setIsRecommended(true);
+        }
+
+        //  Check Active Event
+        dto.setHasActiveEvent(checkActiveEvent(entity));
+    }
+
+    private void enrichPlaceDetailResponse(PlaceDetailResponse dto, Place entity, Set<Long> preferredIds) {
+        //  Check Recommended
+        if (preferredIds.contains(entity.getCategory().getId())) {
+            dto.setIsRecommended(true);
+        }
+
+        //  Check Active Event
+        dto.setHasActiveEvent(checkActiveEvent(entity));
+    }
+
+    private boolean checkActiveEvent(Place entity) {
+        if (entity.getEvents() == null || entity.getEvents().isEmpty()) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return entity.getEvents().stream()
+                .anyMatch(ev -> !ev.isDeleted() && ev.getStartTime() != null && ev.getEndTime() != null
+                        && !now.isBefore(ev.getStartTime()) && !now.isAfter(ev.getEndTime()));
+    }
+
+    private Set<Long> getPreferredCategoryIds() {
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId == 0L) {
+            return Collections.emptySet();
+        }
+        return userPreferenceRepository.findByUserId(currentUserId).stream()
+                .map(up -> up.getCategory().getId())
+                .collect(Collectors.toSet());
+    }
+
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
+        }
+        return 0L;
+    }
 
 }

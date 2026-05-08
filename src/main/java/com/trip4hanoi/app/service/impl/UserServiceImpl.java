@@ -163,6 +163,10 @@ public class UserServiceImpl implements UserService {
             userEntity.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
+        if (request.getIsLocationTrackingEnabled() != null) {
+            userEntity.setIsLocationTrackingEnabled(request.getIsLocationTrackingEnabled());
+        }
+
         userRepository.save(userEntity);
         
         // Nếu user bị khóa (INACTIVE), thu hồi ngay lập tức mọi token đang hoạt động

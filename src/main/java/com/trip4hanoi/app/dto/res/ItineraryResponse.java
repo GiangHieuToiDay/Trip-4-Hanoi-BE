@@ -16,7 +16,7 @@ public class ItineraryResponse {
     private Integer days;
     private Integer numberOfPeople;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", timezone = "Asia/Ho_Chi_Minh")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime createdAt;
 
     private List<DayItineraryResponse> itineraryDays;

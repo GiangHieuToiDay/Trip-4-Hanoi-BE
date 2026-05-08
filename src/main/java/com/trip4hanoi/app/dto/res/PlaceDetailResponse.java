@@ -20,4 +20,11 @@ public class PlaceDetailResponse {
     private List<ImageResponse> images; // Danh sách album ảnh
     private List<ReviewResponse> reviews;
     private List<EventResponse> events;
+
+    @Builder.Default
+    private Boolean isRecommended = false;
+    @Builder.Default
+    private Boolean hasActiveEvent = false;
+    @Builder.Default
+    private Double distance = 0.0;
 }

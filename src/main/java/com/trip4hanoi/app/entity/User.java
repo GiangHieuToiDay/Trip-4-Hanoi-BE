@@ -63,6 +63,10 @@ public class User implements UserDetails {
     @Column(name = "fcm_token")
     private String fcmToken;
 
+    @Builder.Default
+    @Column(name = "is_location_tracking_enabled")
+    private Boolean isLocationTrackingEnabled = true;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "tbl_user_role",
             joinColumns = @JoinColumn(name = "user_id"),
