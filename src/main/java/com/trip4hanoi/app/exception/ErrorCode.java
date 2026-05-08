@@ -75,7 +75,14 @@ public enum ErrorCode {
     POST_ALREADY_SAVED(1037, "Post already saved", HttpStatus.BAD_REQUEST),
     POST_NOT_SAVED(1038, "Post not saved", HttpStatus.NOT_FOUND),
     EVENT_NOT_FOUND(1039, "Event not found", HttpStatus.NOT_FOUND),
-    NOTIFICATION_NOT_FOUND(1040, "Notification not found", HttpStatus.NOT_FOUND);
+    NOTIFICATION_NOT_FOUND(1040, "Notification not found", HttpStatus.NOT_FOUND),
+    
+    // VALIDATION ERRORS
+    INVALID_EMAIL(1041, "Invalid email format", HttpStatus.BAD_REQUEST),
+    EMAIL_IS_EMPTY(1042, "Email must not be empty", HttpStatus.BAD_REQUEST),
+    PASSWORD_IS_EMPTY(1043, "Password must not be empty", HttpStatus.BAD_REQUEST),
+    USERNAME_IS_EMPTY(1044, "Username must not be empty", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD_LENGTH(1045, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST);
 
 
     private final int code;

@@ -26,6 +26,6 @@ public interface ItineraryService {
 
     ItineraryResponse reorderPlace(Long itineraryPlaceId, int newDay, int newOrderIndex);
 
-    ItineraryResponse cloneItinerary(Long itineraryId);
+    ItineraryResponse cloneItinerary(Long itineraryId, Long userId);
 
 }

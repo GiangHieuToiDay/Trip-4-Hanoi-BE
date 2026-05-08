@@ -1,7 +1,11 @@
 package com.trip4hanoi.app.service;
 
+import com.trip4hanoi.app.dto.res.PostLikeResponse;
+import java.util.List;
+
 public interface PostLikeService {
     void toggleLike(Long postId);
-    long countLikes(Long postId);
-    boolean isLikedByUser(Long postId, Long userId);
+    List<PostLikeResponse> getLikesByPostId(Long postId);
+    long countLikesByPostId(Long postId);
+    boolean isPostLikedByUser(Long postId, Long userId);
 }

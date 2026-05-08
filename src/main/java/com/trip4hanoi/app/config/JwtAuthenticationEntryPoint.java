@@ -26,12 +26,19 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
      */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        // Lấy ErrorCode chuẩn từ Exception System (thường là lỗi - Unauthenticated)
+        // Mặc định là lỗi chưa xác thực
         ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
+        
+        // Kiểm tra xem lỗi có phải do Token hết hạn không (thông qua attribute được đặt bởi JwtDecoder)
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authException.getMessage().contains("Jwt expired")) {
+            errorCode = ErrorCode.TOKEN_EXPIRED;
+        }
 
-        // Thiết lập mã trạng thái HTTP (401) và định dạng JSON
+        // Thiết lập mã trạng thái HTTP và định dạng JSON
         response.setStatus(errorCode.getStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
 
         // Tạo cấu trúc phản hồi API thống nhất (APIResponse)
         APIResponse<Void> apiResponse = APIResponse.<Void>builder()
@@ -42,7 +49,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         // Chuyển đổi đối tượng APIResponse sang chuỗi JSON và ghi vào Body của phản hồi
         ObjectMapper mapper = new ObjectMapper();
-        response.setCharacterEncoding("UTF-8");
         response.getWriter().write(mapper.writeValueAsString(apiResponse));
         response.flushBuffer();
     }

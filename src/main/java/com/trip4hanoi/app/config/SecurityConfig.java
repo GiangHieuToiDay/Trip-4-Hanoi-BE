@@ -8,6 +8,7 @@ import com.trip4hanoi.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -37,16 +38,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final PasswordEncoder passwordEncoder;
-    private final UserDetailServiceCustomizer userDetailServiceCustomizer;
     private final JwtDecoderConfig jwtDecoderConfig;
     private final UserRepository userRepository;
     private final RedisAuthorityRepository redisAuthorityRepository;
 
     private final String[] PUBLIC_ENDPOINTS = {
-            "/api/auth/**", "/login/**", "/swagger-ui/**",
+            "/api/auth/login",
+            "/api/auth/refresh-token",
+            "/login/**",
+            "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/swagger-ui.html",
+            "/swagger-ui.html"
+    };
+
+    private final String[] PUBLIC_GET_ENDPOINTS = {
             "/api/places/**",
             "/api/events/**",
             "/api/posts/**",
@@ -67,8 +72,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
 
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
 
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
 
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

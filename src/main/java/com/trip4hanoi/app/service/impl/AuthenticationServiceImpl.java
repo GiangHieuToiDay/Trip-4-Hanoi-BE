@@ -124,18 +124,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      * @throws ParseException
      */
     @Override
-    public void logout(String token) throws ParseException {
-        JwtInfo jwtInfo = jwtService.parseToken(token);
-        String jwtId = jwtInfo.getJwtId();
-        Date expiredTime = jwtInfo.getExpiredTime();
+    public void logout(String token) {
+        try {
+            JwtInfo jwtInfo = jwtService.parseToken(token);
+            String jwtId = jwtInfo.getJwtId();
+            Date expiredTime = jwtInfo.getExpiredTime();
 
-        if (jwtId == null || expiredTime.before(new Date())) {
-            log.warn("Logout attempt with invalid or expired token.");
-            return;
+            if (jwtId == null || expiredTime.before(new Date())) {
+                log.warn("Logout attempt with invalid or expired token.");
+                return;
+            }
+
+            redisTokenRepository.deleteById(jwtId);
+            log.info("Logout success for token: {}", jwtId);
+        } catch (ParseException e) {
+            log.error("Failed to parse token during logout: {}", e.getMessage());
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
-
-        redisTokenRepository.deleteById(jwtId);
-        log.info("Logout success for token: {}", jwtId);
     }
 
     /**

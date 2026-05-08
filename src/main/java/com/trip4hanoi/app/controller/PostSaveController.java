@@ -64,7 +64,7 @@ public class PostSaveController {
     public ResponseEntity<APIResponse<PageResponse<PostSaveResponse>>> getAllSavedPosts(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PageResponse<PostSaveResponse> response = postSaveService.getAllSavedPosts(page, size);
+        PageResponse<PostSaveResponse> response = postSaveService.getAllSavedPostsAdmin(page, size);
         return ResponseEntity.ok(
                 APIResponse.<PageResponse<PostSaveResponse>>builder()
                         .status(HttpStatus.OK.value())

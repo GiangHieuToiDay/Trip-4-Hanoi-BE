@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,21 +24,14 @@ import java.util.List;
 public class ItineraryController {
     private final ItineraryService itineraryService;
 
-//    @PostMapping("/create")
-//    public ResponseEntity<ItineraryResponse> createItinerary(
-//            @RequestBody ItineraryRequest request,
-//            @RequestHeader("User-Id") Long userId) {
-//        return ResponseEntity.ok(itineraryService.createItinerary(request, userId));
-//    }
-
     //@Operation(summary = "Create itinerary", description = "API create itinerary for user")
     @PostMapping("/create")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> createItinerary(
             @Valid
             @RequestBody ItineraryRequest request,
-            @RequestHeader("User-Id") Long userId) {
-
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
         ItineraryResponse itinerary = itineraryService.createItinerary(request, userId);
 
         APIResponse<ItineraryResponse> response = APIResponse.<ItineraryResponse>builder()
@@ -57,6 +52,7 @@ public class ItineraryController {
 
     //@Operation(summary = "Add place to itinerary", description = "API add place into itinerary")
     @PostMapping("/add-place")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> addPlaceToItinerary(
             @RequestBody ItineraryPlaceRequest request) {
 
@@ -82,8 +78,8 @@ public class ItineraryController {
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<List<ItineraryResponse>>> getUserItineraries(
-            @RequestHeader("User-Id") Long userId) {
-
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
         List<ItineraryResponse> itineraries = itineraryService.getUserItineraries(userId);
 
         APIResponse<List<ItineraryResponse>> response = APIResponse.<List<ItineraryResponse>>builder()
@@ -97,6 +93,7 @@ public class ItineraryController {
     }
 
     @PutMapping("/update-place")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> updatePlaceInItinerary(
             @RequestBody ItineraryPlaceRequest request) {
 
@@ -113,6 +110,7 @@ public class ItineraryController {
     }
 
     @DeleteMapping("/remove-place/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> removePlaceFromItinerary(
             @PathVariable Long id) {
 
@@ -129,6 +127,7 @@ public class ItineraryController {
     }
 
     @PutMapping("/update-itinerary/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> updateItinerary(
             @RequestBody ItineraryRequest request,
             @PathVariable Long id
@@ -163,6 +162,7 @@ public class ItineraryController {
     }
 
     @PutMapping("/update-full")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> updateFull(
             @RequestBody ItineraryUpdateFullRequest request) {
 
@@ -195,6 +195,7 @@ public class ItineraryController {
     }
 
     @PutMapping("/reorder-place")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> reorderPlace(
             @RequestParam Long itineraryPlaceId,
             @RequestParam int dayNumber,
@@ -215,10 +216,12 @@ public class ItineraryController {
 
 
     @PostMapping("/clone/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> cloneItinerary(
-            @PathVariable Long id) {
-
-        ItineraryResponse result = itineraryService.cloneItinerary(id);
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
+        ItineraryResponse result = itineraryService.cloneItinerary(id, userId);
 
         APIResponse<ItineraryResponse> response = APIResponse.<ItineraryResponse>builder()
                 .status(HttpStatus.OK.value())

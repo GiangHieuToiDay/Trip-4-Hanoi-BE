@@ -544,7 +544,7 @@ public class ItineraryServiceImpl implements ItineraryService {
 
     @Override
     @Transactional
-    public ItineraryResponse cloneItinerary(Long itineraryId) {
+    public ItineraryResponse cloneItinerary(Long itineraryId, Long userId) {
 
         Itinerary old = itineraryRepository.findByIdWithPlaces(itineraryId);
 
@@ -552,12 +552,15 @@ public class ItineraryServiceImpl implements ItineraryService {
             throw new AppException(ErrorCode.PLAN_NOT_FOUND);
         }
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
         Itinerary clone = Itinerary.builder()
                 .title(old.getTitle() + " (Copy)")
                 .budget(old.getBudget())
                 .days(old.getDays())
                 .numberOfPeople(old.getNumberOfPeople())
-                .user(old.getUser())
+                .user(user)
                 .build();
 
         itineraryRepository.save(clone);

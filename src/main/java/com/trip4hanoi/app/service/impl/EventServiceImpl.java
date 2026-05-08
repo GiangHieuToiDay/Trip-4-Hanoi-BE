@@ -20,6 +20,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +51,7 @@ public class EventServiceImpl implements EventService {
     @Override
     public PageResponse<EventResponse> getAllEventsUser(String keyword, Long placeId, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").ascending());
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = java.time.LocalDateTime.now();
         Page<Event> eventPage = eventRepository.searchEventsUser(keyword, placeId, now, pageable);
 
         List<EventResponse> data = eventPage.getContent().stream()
@@ -99,7 +101,7 @@ public class EventServiceImpl implements EventService {
      */
     @Override
     @Transactional
-    public EventResponse createEvent(EventRequest request, org.springframework.web.multipart.MultipartFile[] images) {
+    public EventResponse createEvent(EventRequest request, MultipartFile[] images) {
         Place place = placeRepository.findById(request.getPlaceId())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
 
@@ -111,7 +113,7 @@ public class EventServiceImpl implements EventService {
             for (MultipartFile img : images) {
                 if (!img.isEmpty()) {
                     try {
-                        java.util.Map res = cloudinaryService.uploadFile(img);
+                        Map res = cloudinaryService.uploadFile(img);
                         event.getImages().add(EventImage.builder()
                                 .imageUrl(res.get("secure_url").toString())
                                 .publicId(res.get("public_id").toString())

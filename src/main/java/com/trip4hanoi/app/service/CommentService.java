@@ -6,7 +6,7 @@ import com.trip4hanoi.app.dto.res.PageResponse;
 
 public interface CommentService {
     CommentResponse createComment(CommentRequest request);
-    CommentResponse updateComment(Long commentId, String content);
+    CommentResponse updateComment(Long commentId, CommentRequest content);
     void deleteComment(Long commentId);
     PageResponse<CommentResponse> getCommentsByPost(Long postId, int page, int size);
     PageResponse<CommentResponse> getAllComments(int page, int size);

@@ -12,13 +12,15 @@ import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.PostSaveRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.PostSaveService;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,46 +29,58 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Transactional
+@Slf4j(topic = "POST-SAVE-SERVICE")
 public class PostSaveServiceImpl implements PostSaveService {
 
-    PostSaveRepository postSaveRepository;
-    PostRepository postRepository;
-    UserRepository userRepository;
-    PostSaveMapper postSaveMapper;
+    private final PostSaveRepository postSaveRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final PostSaveMapper postSaveMapper;
 
-    @Override
-    public PostSaveResponse savePost(Long postId) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
-
-        if (postSaveRepository.existsByPostIdAndUserId(postId, userId)) {
-            throw new AppException(ErrorCode.POST_ALREADY_SAVED);
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
         }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        Post post = postRepository.findById(postId.longValue());
-        if (post == null) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        PostSave postSave = PostSave.builder()
-                .post(post)
-                .user(user)
-                .build();
-
-        return postSaveMapper.toPostSaveResponse(postSaveRepository.save(postSave));
+        return 0L;
     }
 
     @Override
-    public void unsavePost(Long postId) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
+    @Transactional
+    public PostSaveResponse savePost(Long postId) {
+        Long userId = getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        PostSave postSave = postSaveRepository.findByPostIdAndUserId(postId, userId)
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        if (postSaveRepository.existsByUserAndPost(user, post)) {
+            throw new AppException(ErrorCode.POST_ALREADY_SAVED);
+        }
+
+        PostSave postSave = PostSave.builder()
+                .user(user)
+                .post(post)
+                .build();
+
+        postSaveRepository.save(postSave);
+        return postSaveMapper.toPostSaveResponse(postSaveRepository.save(postSave));
+
+    }
+
+    @Override
+    @Transactional
+    public void unsavePost(Long postId) {
+        Long userId = getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        PostSave postSave = postSaveRepository.findByUserAndPost(user, post)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_SAVED));
 
         postSaveRepository.delete(postSave);
@@ -74,12 +88,12 @@ public class PostSaveServiceImpl implements PostSaveService {
 
     @Override
     public PageResponse<PostSaveResponse> getMySavedPosts(int page, int size) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
+        Long userId = getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<PostSave> postSavePage = postSaveRepository.findByUserId(userId, pageable);
-
         List<PostSaveResponse> responses = postSavePage.getContent().stream()
                 .map(postSaveMapper::toPostSaveResponse)
                 .collect(Collectors.toList());
@@ -88,14 +102,14 @@ public class PostSaveServiceImpl implements PostSaveService {
     }
 
     @Override
-    public PageResponse<PostSaveResponse> getAllSavedPosts(int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "id"));
+    public PageResponse<PostSaveResponse> getAllSavedPostsAdmin(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size);
         Page<PostSave> postSavePage = postSaveRepository.findAll(pageable);
 
-        List<PostSaveResponse> responses = postSavePage.getContent().stream()
+        List<PostSaveResponse> data = postSavePage.getContent().stream()
                 .map(postSaveMapper::toPostSaveResponse)
                 .collect(Collectors.toList());
 
-        return PageResponse.from(postSavePage, responses);
+        return PageResponse.from(postSavePage, data);
     }
 }

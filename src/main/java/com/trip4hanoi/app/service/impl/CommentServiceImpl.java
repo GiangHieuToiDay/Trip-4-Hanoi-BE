@@ -13,13 +13,14 @@ import com.trip4hanoi.app.repository.CommentRepository;
 import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.CommentService;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,79 +29,104 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Transactional
+@Slf4j(topic = "COMMENT-SERVICE")
 public class CommentServiceImpl implements CommentService {
 
-    CommentRepository commentRepository;
-    CommentMapper commentMapper;
-    PostRepository postRepository;
-    UserRepository userRepository;
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final CommentMapper commentMapper;
+
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
+        }
+        return 0L;
+    }
 
     @Override
+    @Transactional
     public CommentResponse createComment(CommentRequest request) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
-
+        Long userId = getCurrentUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Post post = postRepository.findById(request.getPostId().longValue());
-        if (post == null) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
+        Post post = postRepository.findById(request.getPostId().longValue())
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        Comment comment = Comment.builder()
+                .content(request.getContent())
+                .user(user)
+                .post(post)
+                .build();
+
+        return commentMapper.toCommentResponse(commentRepository.save(comment));
+    }
+
+    @Override
+    public CommentResponse updateComment(Long id, CommentRequest request) {
+        Comment comment = commentRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
+
+        Long userId = getCurrentUserId();
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new AppException(ErrorCode.COMMENT_NOT_BY_USER);
         }
 
-        Comment comment = commentMapper.toComment(request);
-        comment.setUser(user);
-        comment.setPost(post);
-
+        comment.setContent(request.getContent());
         return commentMapper.toCommentResponse(commentRepository.save(comment));
     }
 
     @Override
-    public CommentResponse updateComment(Long commentId, String content) {
-        Comment comment = commentRepository.findById(commentId)
+    @Transactional
+    public void deleteComment(Long id) {
+        Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
 
-        // TODO: Check if user is the owner of the comment
-        
-        comment.setContent(content);
-        return commentMapper.toCommentResponse(commentRepository.save(comment));
-    }
+        Long userId = getCurrentUserId();
+        // Allow deletion if it's the owner or MANAGE_USER (admin)
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("MANAGE_USER"));
 
-    @Override
-    public void deleteComment(Long commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
+        if (!comment.getUser().getId().equals(userId) && !isAdmin) {
+            throw new AppException(ErrorCode.COMMENT_NOT_BY_USER);
+        }
 
-        // TODO: Check if user is the owner of the comment
-        
         commentRepository.delete(comment);
     }
 
+
+
+//    @Override
+//    public CommentResponse getCommentById(Long id) {
+//        return commentRepository.findById(id)
+//                .map(commentMapper::toCommentResponse)
+//                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
+//    }
+
     @Override
     public PageResponse<CommentResponse> getCommentsByPost(Long postId, int page, int size) {
-        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
-        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
         Page<Comment> commentPage = commentRepository.findByPostId(postId, pageable);
 
-        List<CommentResponse> responses = commentPage.getContent().stream()
+        List<CommentResponse> data = commentPage.getContent().stream()
                 .map(commentMapper::toCommentResponse)
                 .collect(Collectors.toList());
 
-        return PageResponse.from(commentPage, responses);
+        return PageResponse.from(commentPage, data);
     }
 
     @Override
     public PageResponse<CommentResponse> getAllComments(int page, int size) {
-        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
-        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("id").descending());
         Page<Comment> commentPage = commentRepository.findAll(pageable);
 
-        List<CommentResponse> responses = commentPage.getContent().stream()
+        List<CommentResponse> data = commentPage.getContent().stream()
                 .map(commentMapper::toCommentResponse)
                 .collect(Collectors.toList());
 
-        return PageResponse.from(commentPage, responses);
+        return PageResponse.from(commentPage, data);
     }
 }

@@ -1,68 +1,75 @@
 package com.trip4hanoi.app.service.impl;
 
+import com.trip4hanoi.app.dto.res.PostLikeResponse;
 import com.trip4hanoi.app.entity.Post;
 import com.trip4hanoi.app.entity.PostLike;
 import com.trip4hanoi.app.entity.User;
 import com.trip4hanoi.app.exception.AppException;
 import com.trip4hanoi.app.exception.ErrorCode;
+import com.trip4hanoi.app.mapper.PostLikeMapper;
 import com.trip4hanoi.app.repository.PostLikeRepository;
 import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.PostLikeService;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Transactional
+@Slf4j(topic = "POST-LIKE-SERVICE")
 public class PostLikeServiceImpl implements PostLikeService {
 
-    PostLikeRepository postLikeRepository;
-    PostRepository postRepository;
-    UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final PostLikeMapper postLikeMapper;
 
-    @Override
-    public void toggleLike(Long postId) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        Post post = postRepository.findById(postId.longValue());
-        if (post == null) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
         }
-
-        Optional<PostLike> existingLike = postLikeRepository.findByPostAndUser(post, user);
-
-        if (existingLike.isPresent()) {
-            postLikeRepository.delete(existingLike.get());
-        } else {
-            PostLike newLike = PostLike.builder()
-                    .post(post)
-                    .user(user)
-                    .build();
-            postLikeRepository.save(newLike);
-        }
+        return 0L;
     }
 
     @Override
-    public long countLikes(Long postId) {
+    @Transactional
+    public void toggleLike(Long postId) {
+        Long userId = getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        postLikeRepository.findByUserAndPost(user, post).ifPresentOrElse(
+                postLikeRepository::delete,
+                () -> postLikeRepository.save(PostLike.builder().user(user).post(post).build())
+        );
+    }
+
+    @Override
+    public List<PostLikeResponse> getLikesByPostId(Long postId) {
+        return postLikeRepository.findByPostId(postId).stream()
+                .map(postLikeMapper::toPostLikeResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countLikesByPostId(Long postId) {
         return postLikeRepository.countByPostId(postId);
     }
 
     @Override
-    public boolean isLikedByUser(Long postId, Long userId) {
-        Post post = postRepository.findById(postId.longValue());
-        if (post == null) return false;
-        User user = User.builder().id(userId).build();
-        return postLikeRepository.existsByPostAndUser(post, user);
+    public boolean isPostLikedByUser(Long postId, Long userId) {
+        return postLikeRepository.existsByPostIdAndUserId(postId, userId);
     }
 }

@@ -10,6 +10,6 @@ import java.text.ParseException;
 
 public interface AuthenticationService {
     LoginResponse login(LoginRequest loginRequest);
-    void logout(String token) throws ParseException;
+    void logout(String token);
     LoginResponse refreshToken(RefreshTokenRequest token) throws ParseException, JOSEException;
 }

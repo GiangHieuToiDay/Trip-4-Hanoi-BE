@@ -22,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,20 +56,13 @@ public class PostServiceImpl implements PostService {
         );
 
         Page<Post> postPage = postRepository.findAll(pageable);
-
-        if (postPage.isEmpty()) {
-            throw new AppException(ErrorCode.POST_IS_EMPTY);
-        }
-
         return postPage.map(postMapper::toPostResponse);
     }
 
     @Override
     public PostResponse findPostById(long id) {
-        Post post = postRepository.findById(id);
-        if (post == null) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
-        }
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
         return postMapper.toPostResponse(post);
     }
 
@@ -79,16 +74,17 @@ public class PostServiceImpl implements PostService {
                 Sort.by("createdAt").descending()
         );
         Page<Post> pagePost = postRepository.findByTitleContainingIgnoreCase(title, pageable);
-        if (pagePost.isEmpty()) {
-            throw new AppException(ErrorCode.POST_IS_EMPTY);
-        }
         return pagePost.map(postMapper::toPostResponse);
     }
 
     @Override
     public PostResponse createPost(PostRequest request, List<MultipartFile> images) {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        Long userId = 0L;
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            userId = (Long) jwt.getClaims().get("id");
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -131,10 +127,8 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostResponse updatePost(long id, PostRequest request, List<MultipartFile> images) {
-        Post post = postRepository.findById(id);
-        if (post == null) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
-        }
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
 
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
@@ -194,7 +188,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public void deletePost(long id) {
-        Post post = postRepository.findById(id);
+        Post post = postRepository.findById(id).orElse(null);
         if (post != null && post.getImages() != null) {
             for (PostImage img : post.getImages()) {
                 if (img.getPublicId() != null) {
@@ -213,15 +207,17 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public List<PostResponse> getPostByUser() {
-        // TODO: Get userId from SecurityContext
-        long userId = 1;
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        Long userId = 0L;
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            userId = (Long) jwt.getClaims().get("id");
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         List<Post> posts = postRepository.findPostByUser(user);
-        if (posts.isEmpty()) {
-            throw new AppException(ErrorCode.POST_IS_EMPTY);
-        }
+
         return posts.stream().map(postMapper::toPostResponse).toList();
     }
 }

@@ -26,7 +26,10 @@ public class PlaceResponse {
     private List<ImageResponse> images; // Danh sách album ảnh
 
 
-    private Double distance;// khoảng cách giữa các điểm -  Tính bằng km
-    private Boolean isRecommended;//  [TODO: USER_AUTH] Đánh dấu dựa trên sở thích
-    private Boolean hasActiveEvent;
+    @Builder.Default
+    private Double distance = 0.0;// khoảng cách giữa các điểm -  Tính bằng km
+    @Builder.Default
+    private Boolean isRecommended = false;//  [TODO: USER_AUTH] Đánh dấu dựa trên sở thích
+    @Builder.Default
+    private Boolean hasActiveEvent = false;
 }

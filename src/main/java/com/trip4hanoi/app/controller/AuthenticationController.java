@@ -38,7 +38,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<APIResponse<Void>> logout(@RequestHeader("Authorization") String authHeader) throws ParseException {
+    public ResponseEntity<APIResponse<Void>> logout(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         authenticationService.logout(token);
         APIResponse<Void> response=   APIResponse.<Void>builder()
@@ -52,7 +52,7 @@ public class AuthenticationController {
 
     @PostMapping("/refresh-token")
     public ResponseEntity<APIResponse<LoginResponse>> refreshToken(
-            @RequestBody RefreshTokenRequest refreshToken) throws ParseException, JOSEException {
+            @Valid @RequestBody RefreshTokenRequest refreshToken) throws ParseException, JOSEException {
 
         LoginResponse newTokens = authenticationService.refreshToken(refreshToken);
 

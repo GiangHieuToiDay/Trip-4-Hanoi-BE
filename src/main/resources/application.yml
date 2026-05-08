@@ -5,6 +5,10 @@ spring:
   application:
     name: Trip4HaNoi-BE
   
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS
+    time-zone: Asia/Ho_Chi_Minh
+  
   profiles:
     active: "@spring.profiles.active@"
 #     active: dev

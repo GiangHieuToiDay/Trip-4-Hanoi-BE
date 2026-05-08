@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -121,9 +124,11 @@ public class NotificationController {
      * Sau này backend dùng token đó để push notification
      */
     @PostMapping("/token")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<String>> setFcmToken(
             @RequestParam String token,
-            @RequestHeader("User-Id") Long userId) {
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
         log.info("REST request to set FCM token for user: {}", userId);
         notificationService.updateFcmToken(userId, token);
         return ResponseEntity.ok(APIResponse.<String>builder()

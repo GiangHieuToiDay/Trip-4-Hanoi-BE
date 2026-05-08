@@ -79,7 +79,7 @@ public class UserController {
 
     @Operation(summary = "Update User", description ="Api update user to database")
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null and authentication.principal.id == #request.id)")
+    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null and authentication.principal.claims['id'] == #request.id)")
     public ResponseEntity<APIResponse<Void>> updateUser(
             @RequestPart("data") @Valid UserUpdateRequest request,
             @RequestPart(value = "file" , required = false) MultipartFile file) throws IOException {
@@ -99,7 +99,7 @@ public class UserController {
 
     @Operation(summary = "Inactive account", description = "Api inactive account to database")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null and authentication.principal.id == #id)")
+    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null and authentication.principal.claims['id'] == #id)")
     public ResponseEntity<APIResponse<Void>> inactiveAccount(@PathVariable Long id){
 
         userService.deleteUser(id);

@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,16 +25,7 @@ public class EventController {
     private final EventService eventService;
 
     /**
-<<<<<<< HEAD
-     * ENDPOINT - USER (hiển thị event đáng và sắp diễn ra)
-=======
      * ENDPOINT - USER: Lấy danh sách sự kiện đang và sắp diễn ra
->>>>>>> origin/dev
-     * @param keyword
-     * @param placeId
-     * @param page
-     * @param size
-     * @return
      */
     @GetMapping
     public ResponseEntity<APIResponse<PageResponse<EventResponse>>> getAllEvents(
@@ -59,7 +52,8 @@ public class EventController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<String>> followEvent(
             @RequestBody EventFollowRequest request,
-            @RequestHeader("User-Id") Long userId) {
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
         eventService.followEvent(request, userId);
         APIResponse<String> response = APIResponse.<String>builder()
                 .status(HttpStatus.OK.value())

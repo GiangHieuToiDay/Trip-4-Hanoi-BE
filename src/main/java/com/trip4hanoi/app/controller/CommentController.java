@@ -43,7 +43,7 @@ public class CommentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<CommentResponse>> updateComment(
             @PathVariable Long id,
-            @RequestBody String content) {
+            @RequestBody CommentRequest content) {
         CommentResponse comment = commentService.updateComment(id, content);
         return ResponseEntity.ok(
                 APIResponse.<CommentResponse>builder()
