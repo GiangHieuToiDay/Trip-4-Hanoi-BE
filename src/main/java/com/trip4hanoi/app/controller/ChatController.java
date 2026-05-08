@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
@@ -20,18 +23,13 @@ public class ChatController {
 
     private final GeminiService geminiService;
 
-//    @PostMapping
-//    public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request) {
-//        ChatResponse response = geminiService.chatWithAI(request.getMessage());
-//        return ResponseEntity.ok(response);
-//    }
-
     //@Operation(summary = "Chat with AI", description = "API send message to AI and receive response")
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ChatResponse>> chat(@RequestBody ChatRequest request) {
 
-        ChatResponse chatResponse = geminiService.chatWithAI(request.getMessage());
+        Long userId = getCurrentUserId();
+        ChatResponse chatResponse = geminiService.chatWithAI(request.getMessage(), userId);
 
         APIResponse<ChatResponse> response = APIResponse.<ChatResponse>builder()
                 .status(HttpStatus.OK.value())
@@ -43,4 +41,12 @@ public class ChatController {
         return ResponseEntity.ok(response);
     }
 
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
+        }
+        return 0L;
+    }
 }

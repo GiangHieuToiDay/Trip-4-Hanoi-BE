@@ -4,6 +4,7 @@ import com.trip4hanoi.app.entity.Category;
 import com.trip4hanoi.app.entity.Place;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,7 @@ import java.util.Optional;
 @Repository
 public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecificationExecutor<Place> {
     List<Place> findByCategoryIdAndDeletedFalse(Long categoryId);
+    @EntityGraph(attributePaths = {"category", "images"})
     List<Place> findAllByDeletedFalse();
     Optional<Place> findByNameAndDeletedFalse(String name);
     Optional<Place> findByName(String name);

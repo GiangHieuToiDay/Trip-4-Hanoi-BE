@@ -67,7 +67,7 @@ public class DataInitializer implements CommandLineRunner {
 
         log.info("Initializing specialized test data for Itinerary Logic...");
 
-        // 1. Tạo User Test
+        // Tạo User Test
         Role userRole = roleRepository.findByName("USER").orElseThrow();
         User tester = User.builder()
                 .username("SmartTester")
@@ -79,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
         userRepository.save(tester);
 
-        // 2. Thiết lập sở thích: Du lịch và Cafe
+        //  Thiết lập sở thích: Du lịch và Cafe
         Category travel = getOrCreateCategory("Địa điểm du lịch");
         Category cafe = getOrCreateCategory("Cafe");
         Category food = getOrCreateCategory("Ẩm thực");
@@ -87,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
         userPreferenceRepository.save(UserPreference.builder().user(tester).category(travel).build());
         userPreferenceRepository.save(UserPreference.builder().user(tester).category(cafe).build());
 
-        // 3. Giả lập vị trí: User đang ở Cầu Giấy (Tòa nhà Keangnam)
+        //  Giả lập vị trí: User đang ở Cầu Giấy (Tòa nhà Keangnam)
         // Lat: 21.0173, Lng: 105.7841
         userLocationHistoryRepository.save(UserLocationHistory.builder()
                 .user(tester)
@@ -98,7 +98,7 @@ public class DataInitializer implements CommandLineRunner {
                 .createdAt(LocalDateTime.now())
                 .build());
 
-        // 4. Tạo địa điểm ở Cầu Giấy (Gần User - Sẽ có điểm Distance cao)
+        //  Tạo địa điểm ở Cầu Giấy (Gần User - Sẽ có điểm Distance cao)
         List<Place> testPlaces = new ArrayList<>();
         
         // Cafe gần Keangnam (Cầu Giấy)
@@ -108,7 +108,7 @@ public class DataInitializer implements CommandLineRunner {
         // Nhà hàng ở Cầu Giấy
         testPlaces.add(createTestPlace("Cơm Niêu Thúy Nga", "Ăn trưa gần Keangnam", 21.0255, 105.8015, "Cầu Giấy", food, 4.2));
 
-        // 5. Tạo địa điểm ở Hoàn Kiếm (Xa User - Sẽ có điểm Distance thấp)
+        // Tạo địa điểm ở Hoàn Kiếm (Xa User - Sẽ có điểm Distance thấp)
         testPlaces.add(createTestPlace("Kem Tràng Tiền", "Rất xa Cầu Giấy", 21.0245, 105.8545, "Hoàn Kiếm", food, 4.8));
         testPlaces.add(createTestPlace("Nhà Thờ Lớn", "Điểm tham quan xa", 21.0285, 105.8495, "Hoàn Kiếm", travel, 4.9));
 

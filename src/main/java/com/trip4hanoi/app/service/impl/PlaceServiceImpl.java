@@ -19,7 +19,8 @@ import com.trip4hanoi.app.service.PlaceService;
 import com.trip4hanoi.app.service.UserLocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -99,6 +100,7 @@ public class PlaceServiceImpl implements PlaceService {
      */
     @Override
     @Transactional
+    @CacheEvict(value = "personalized_recommendations", allEntries = true)
     public PlaceResponse createPlace(PlaceRequest request, MultipartFile[] images) {
         Place place = placeMapper.toPlace(request);
         if (request.getCategoryId() != null) {
@@ -139,6 +141,7 @@ public class PlaceServiceImpl implements PlaceService {
      */
     @Override
     @Transactional
+    @CacheEvict(value = "personalized_recommendations", allEntries = true)
     public PlaceResponse updatePlace(Long id, PlaceRequest request, MultipartFile[] images) {
 
         Place place = placeRepository.findById(id)
@@ -219,6 +222,7 @@ public class PlaceServiceImpl implements PlaceService {
      */
     @Override
     @Transactional
+    @CacheEvict(value = "personalized_recommendations", allEntries = true)
     public void deletePlace(Long id) {
         Place place = placeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));

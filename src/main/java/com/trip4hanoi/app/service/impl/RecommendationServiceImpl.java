@@ -10,6 +10,7 @@ import com.trip4hanoi.app.repository.EventRepository;
 import com.trip4hanoi.app.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -30,53 +31,60 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final EventRepository eventRepository;
 
     @Override
+    @Cacheable(value = "personalized_recommendations", 
+               key = "T(SecurityContextHolder).getContext().getAuthentication()?.getPrincipal() instanceof T(Jwt) ? " +
+                     "T(SecurityContextHolder).getContext().getAuthentication().getPrincipal().getClaims().get('id') + '_' + #limit : 'guest_' + #limit")
     public List<PlaceResponse> getPersonalizedRecommendations(int limit) {
         Long userId = getCurrentUserId();
-        if (userId == 0L) {
-            // Nếu khách vãng lai, gợi ý top rating chung
-            return placeRepository.findAllByDeletedFalse().stream()
+        
+        // Lấy tất cả địa điểm (Eager loaded category/images via EntityGraph)
+        List<Place> allPlaces = placeRepository.findAllByDeletedFalse();
+
+        //  Lấy ID các địa điểm có sự kiện đang diễn ra (Tránh N+1)
+        LocalDateTime now = LocalDateTime.now();
+        Set<Long> placeIdsWithEvents = eventRepository.findAll().stream()
+                .filter(e -> !e.isDeleted() && !now.isBefore(e.getStartTime()) && !now.isAfter(e.getEndTime()))
+                .map(e -> e.getPlace().getId())
+                .collect(Collectors.toSet());
+
+        if (userId == null || userId == 0L) {
+            return allPlaces.stream()
                     .sorted(Comparator.comparing(Place::getRatingAvg).reversed())
                     .limit(limit)
-                    .map(placeMapper::toPlaceResponse)
+                    .map(place -> {
+                        PlaceResponse res = placeMapper.toPlaceResponse(place);
+                        res.setHasActiveEvent(placeIdsWithEvents.contains(place.getId()));
+                        return res;
+                    })
                     .collect(Collectors.toList());
         }
 
-        //  Lấy top các Quận người dùng hay ghé qua trong 15 ngày
+        //  Thông tin người dùng
         List<String> topDistricts = locationHistoryRepository.findTopDistricts(userId, LocalDateTime.now().minusDays(15));
-        
-        // Lấy danh mục yêu thích
         Set<Long> preferredCategoryIds = userPreferenceRepository.findByUserId(userId).stream()
                 .map(up -> up.getCategory().getId())
                 .collect(Collectors.toSet());
 
-        //  Lấy tất cả địa điểm chưa bị xóa
-        List<Place> allPlaces = placeRepository.findAllByDeletedFalse();
-
         //  Thuật toán tính điểm (Scoring)
         return allPlaces.stream()
                 .map(place -> {
-                    double score = calculateScore(place, topDistricts, preferredCategoryIds);
+                    double score = calculateScore(place, topDistricts, preferredCategoryIds, placeIdsWithEvents);
                     return new PlaceScore(place, score);
                 })
                 .sorted(Comparator.comparing(PlaceScore::getScore).reversed())
                 .limit(limit)
                 .map(ps -> {
                     PlaceResponse res = placeMapper.toPlaceResponse(ps.getPlace());
-                    // Đánh dấu logic bổ sung (nếu cần)
                     if (preferredCategoryIds.contains(ps.getPlace().getCategory().getId())) {
                         res.setIsRecommended(true);
                     }
-                    
-                    // [MỚI] Đánh dấu nếu có event
-                    res.setHasActiveEvent(eventRepository.findByPlaceId(ps.getPlace().getId()).stream()
-                            .anyMatch(e -> !LocalDateTime.now().isBefore(e.getStartTime()) && !LocalDateTime.now().isAfter(e.getEndTime())));
-                    
+                    res.setHasActiveEvent(placeIdsWithEvents.contains(ps.getPlace().getId()));
                     return res;
                 })
                 .collect(Collectors.toList());
     }
 
-    private double calculateScore(Place place, List<String> topDistricts, Set<Long> preferredCategoryIds) {
+    private double calculateScore(Place place, List<String> topDistricts, Set<Long> preferredCategoryIds, Set<Long> placeIdsWithEvents) {
         double score = place.getRatingAvg() != null ? place.getRatingAvg() : 0.0;
 
         // Cộng 2 điểm nếu ở Quận hay đi (Hot Zone)
@@ -95,10 +103,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         score += (place.getViewCount() * 0.01);
 
         // [MỚI] Ưu tiên cực cao nếu có Sự kiện đang diễn ra
-        boolean hasActiveEvent = eventRepository.findByPlaceId(place.getId()).stream()
-                .anyMatch(e -> !LocalDateTime.now().isBefore(e.getStartTime()) && !LocalDateTime.now().isAfter(e.getEndTime()));
-        if (hasActiveEvent) {
-            score += 5.0; // Điểm thưởng lớn nhất để đẩy Event lên top
+        if (placeIdsWithEvents.contains(place.getId())) {
+            score += 5.0;
         }
 
         return score;
