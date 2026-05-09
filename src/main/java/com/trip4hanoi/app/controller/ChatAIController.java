@@ -19,7 +19,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
-public class ChatController {
+public class ChatAIController {
 
     private final GeminiService geminiService;
 

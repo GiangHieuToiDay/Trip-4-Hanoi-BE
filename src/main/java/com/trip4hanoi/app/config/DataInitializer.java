@@ -166,6 +166,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Basic Access
         createPermissionIfNotExist("VIEW_ALL", "Xem thông tin hệ thống (Công khai)");
+        createPermissionIfNotExist(   "APPROVE_CHAT"," Quyền dành cho Staff để nhận phòng.");
+        createPermissionIfNotExist(   "MANAGE_CHAT"," Quyền dành cho Admin/Staff để quản lý hoặc viết ghi chú");
+
     }
 
     private void createPermissionIfNotExist(String name, String description) {
