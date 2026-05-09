@@ -44,11 +44,14 @@ public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS = {
             "/api/auth/login",
+            "/api/auth/login-google",
             "/api/auth/refresh-token",
             "/login/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/swagger-ui.html"
+            "/swagger-ui.html",
+            "/api/auth/verify",
+            "/api/auth/resend-verify"
     };
 
     private final String[] PUBLIC_GET_ENDPOINTS = {
@@ -96,7 +99,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174", "http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173", 
+                "http://localhost:5174", 
+                "http://localhost:3000", 
+                "http://localhost:5500",
+                "http://127.0.0.1:5500"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
@@ -62,6 +63,19 @@ public class User implements UserDetails {
 
     @Column(name = "fcm_token")
     private String fcmToken;
+
+    @Column(name = "verification_expired_at")
+    private LocalDateTime verificationExpiredAt;
+
+    @Builder.Default
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
+
+    @Column(name = "email_sent_count")
+    private Integer emailSentCount = 0;
+
+    @Column(name = "email_sent_date")
+    private LocalDate emailSentDate;
 
     @Builder.Default
     @Column(name = "is_location_tracking_enabled")

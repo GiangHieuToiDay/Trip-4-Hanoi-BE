@@ -19,23 +19,26 @@ import com.trip4hanoi.app.repository.RedisTokenRepository;
 import com.trip4hanoi.app.repository.RoleRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.CloudinaryService;
+import com.trip4hanoi.app.service.MailService;
 import com.trip4hanoi.app.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,6 +47,10 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    @NonFinal
+    @Value("${app.baseurl}")
+    private String baseurl;
+
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
@@ -51,6 +58,7 @@ public class UserServiceImpl implements UserService {
     private final RedisTokenRepository redisTokenRepository;
     private final RedisAuthorityRepository redisAuthorityRepository; // Thêm repo mới
     private final CloudinaryService cloudinaryService;
+    private final MailService mailService;
 
     @Override
     public UserResponse createUser(UserCreateRequest user, org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
@@ -61,8 +69,26 @@ public class UserServiceImpl implements UserService {
         if (user.getStatus() != null) {
             userEntity.setStatus(user.getStatus());
         } else {
-            userEntity.setStatus(UserStatus.ACTIVE);
+            userEntity.setStatus(UserStatus.INACTIVE);
         }
+
+
+        // Verify email
+        UUID uuid = UUID.randomUUID();
+        String htmlRegister = """
+                <h2>Verify account</h2>
+                <p>Click link below:</p>
+                <a href=\"""" + baseurl + "/api/auth/verify?token=" + uuid + """
+                \">
+                    Verify
+                </a>
+                """;
+        mailService.sendMail(userEntity.getEmail(), "Verify Account", htmlRegister);
+        userEntity.setVerificationCode(uuid.toString());
+        userEntity.setVerificationExpiredAt(LocalDateTime.now().plusMinutes(15));
+        userEntity.setEmailSentCount(1);
+        userEntity.setEmailSentDate(LocalDate.now());
+
         userEntity.setProvider(AuthProvider.LOCAL);
         userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
 

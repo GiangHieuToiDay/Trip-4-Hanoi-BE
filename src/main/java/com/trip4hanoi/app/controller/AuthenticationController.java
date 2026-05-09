@@ -2,6 +2,7 @@ package com.trip4hanoi.app.controller;
 
 
 import com.nimbusds.jose.JOSEException;
+import com.trip4hanoi.app.dto.req.GoogleLoginRequest;
 import com.trip4hanoi.app.dto.req.LoginRequest;
 import com.trip4hanoi.app.dto.req.RefreshTokenRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
@@ -35,6 +36,18 @@ public class AuthenticationController {
                 .build();
 
         return  ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping("/login-google")
+    public ResponseEntity<APIResponse<LoginResponse>> loginGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        APIResponse<LoginResponse> response = APIResponse.<LoginResponse>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Google login successful")
+                .data(authenticationService.loginGoogle(request))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/logout")
@@ -79,6 +92,40 @@ public class AuthenticationController {
 //
 //        return ResponseEntity.status(HttpStatus.OK).body(response);
 //    }
+
+    @PostMapping("/resend-verify")
+    public ResponseEntity<APIResponse<String>> resendVerifyEmail(
+            @RequestParam String email
+    ) {
+
+        authenticationService.resendVerifyMail(email);
+
+        APIResponse<String> response = APIResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Verify email resent successfully")
+                .data("Email sent successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<APIResponse<String>> verifyEmail(
+            @RequestParam String token
+    ) {
+
+        authenticationService.verifyEmail(token);
+
+        APIResponse<String> response = APIResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Email verified successfully")
+                .data("Verify success")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 
 
 
