@@ -29,6 +29,7 @@ public enum ErrorCode {
     NOT_FOUND_ROLE(1007, "Role not found", HttpStatus.NOT_FOUND),
     EMAIL_ALREADY_EXISTS(1008, "Email already exists", HttpStatus.BAD_REQUEST),
     INVALID_CREDENTIALS(1009, "Invalid credentials", HttpStatus.UNAUTHORIZED),
+    EMAIL_LIMIT_EXCEEDED(1046,"Email limit exceed",HttpStatus.BAD_REQUEST),
 
     // TOKEN & AUTH ERRORS
     CANOT_CREATE_TOKEN(1010, "Cannot create JWT token", HttpStatus.INTERNAL_SERVER_ERROR),

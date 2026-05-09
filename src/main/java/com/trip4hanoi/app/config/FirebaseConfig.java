@@ -14,6 +14,9 @@ public class FirebaseConfig {
 
     @PostConstruct
     public void init() throws IOException {
+        if (!FirebaseApp.getApps().isEmpty()) {
+            return;
+        }
 
         FileInputStream serviceAccount =
                 new FileInputStream("src/main/resources/trip4hanoi-1a2ba-firebase-adminsdk-fbsvc-29ccb30801.json");
