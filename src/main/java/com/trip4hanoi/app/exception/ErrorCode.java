@@ -83,8 +83,13 @@ public enum ErrorCode {
     EMAIL_IS_EMPTY(1042, "Email must not be empty", HttpStatus.BAD_REQUEST),
     PASSWORD_IS_EMPTY(1043, "Password must not be empty", HttpStatus.BAD_REQUEST),
     USERNAME_IS_EMPTY(1044, "Username must not be empty", HttpStatus.BAD_REQUEST),
-    INVALID_PASSWORD_LENGTH(1045, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST);
+    INVALID_PASSWORD_LENGTH(1045, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST),
 
+
+    //chat
+    ROOM_NOT_FOUND(1046, "Room not found", HttpStatus.BAD_REQUEST),
+    ROOM_ALREADY_ASSIGNED(1047, "Room is already assigned", HttpStatus.BAD_REQUEST),
+    INVALID_STATUS(1048, "Invalid Status", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

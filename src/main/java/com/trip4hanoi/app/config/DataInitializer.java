@@ -224,7 +224,8 @@ public class DataInitializer implements CommandLineRunner {
         Role userRole = roleRepository.findByName("USER").orElseThrow();
 
         createDefaultAccount("HanoiAdmin", "admin@trip4hanoi.com", adminPassword, Set.of(adminRole));
-        createDefaultAccount("HanoiStaff", "staff@trip4hanoi.com", staffPassword, Set.of(staffRole));
+        createDefaultAccount("HanoiStaff1", "staff_1@trip4hanoi.com", staffPassword, Set.of(staffRole));
+        createDefaultAccount("HanoiStaff2", "staff_2@trip4hanoi.com", staffPassword, Set.of(staffRole));
         createDefaultAccount("HanoiUser", "user@gmail.com", "123456", Set.of(userRole));
     }
 

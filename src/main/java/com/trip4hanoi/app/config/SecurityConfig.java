@@ -50,6 +50,8 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html",
+            "/ws/**",
+            "/swagger-ui.html",
             "/api/auth/verify",
             "/api/auth/resend-verify"
     };
@@ -72,6 +74,7 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // Quan trọng cho SockJS
                 .authorizeHttpRequests(authorize -> authorize
 
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
@@ -84,7 +87,7 @@ public class SecurityConfig {
                         .bearerTokenResolver(customBearerTokenResolver())
                         .jwt(jwtConfigurer ->
                                 jwtConfigurer.decoder(jwtDecoderConfig)
-                                        .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                                        .jwtAuthenticationConverter(jwtAuthenticationConverter(userRepository,redisAuthorityRepository)))
                         .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
                 );
 
@@ -99,13 +102,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173", 
-                "http://localhost:5174", 
-                "http://localhost:3000", 
-                "http://localhost:5500",
-                "http://127.0.0.1:5500"
-        ));
+//        configuration.setAllowedOrigins(Arrays.asList(
+//                "http://localhost:5173",
+//                "http://localhost:5174",
+//                "http://localhost:3000",
+//                "http://localhost:5500",
+//                "http://127.0.0.1:5500"
+//        ));
+        // Cho phép tất cả các nguồn để thuận tiện test từ file HTML local
+        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
@@ -123,8 +128,8 @@ public class SecurityConfig {
         DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
         return request -> {
             String path = request.getRequestURI();
-            if(path != null && path.contains("/api/auth/refresh-token")){
-                return null; // Trả về null để Spring không cố xác thực JWT tại endpoint này
+            if(path != null && (path.contains("/api/auth/refresh-token") || path.contains("/ws"))){
+                return null;
             }
             return resolver.resolve(request);
         };
@@ -137,7 +142,8 @@ public class SecurityConfig {
      * Luồng: Kiểm tra Redis -> Nếu có thì lấy luôn -> Nếu không có thì tìm DB -> Lưu Redis -> Trả về.
      */
     @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter(){
+    public JwtAuthenticationConverter jwtAuthenticationConverter(UserRepository userRepository,
+                                                                 RedisAuthorityRepository redisAuthorityRepository){
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
             String email = jwt.getSubject();

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip4Hanoi - Full Chat Tester</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        h2 { margin-top: 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.8; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #333; }
+        .btn-danger { background: var(--danger); }
+        #log-container { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 0.85em; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 3px; }
+        .log-time { color: #888; margin-right: 10px; }
+        .log-type-rest { color: #b5cea8; }
+        .log-type-ws { color: #ce9178; }
+        .log-type-error { color: #f44747; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 10px; }
+        .status-disconnected { background: #eee; color: #666; }
+        .status-connected { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>1. Cấu hình chung (Configuration)</h2>
+    <div class="grid">
+        <div class="form-group">
+            <label>Base URL</label>
+            <input type="text" id="baseUrl" value="http://localhost:8080">
+        </div>
+        <div class="form-group">
+            <label>Access Token (Bearer)</label>
+            <input type="text" id="token" placeholder="Dán JWT Token vào đây...">
+        </div>
+    </div>
+</div>
+
+<div class="grid">
+    <!-- REST API TEST -->
+    <div class="card">
+        <h2>2. REST API Controller</h2>
+        <div class="form-group">
+            <label>Trạng thái phòng (Status)</label>
+            <select id="roomStatus">
+                <option value="PENDING">PENDING (Chờ tiếp nhận)</option>
+                <option value="ACTIVE">ACTIVE (Đang chat)</option>
+                <option value="CLOSED">CLOSED (Đã đóng)</option>
+            </select>
+        </div>
+        <div class="btn-group">
+            <button class="btn-primary" onclick="getRooms()">Lấy DS phòng (Get Rooms)</button>
+        </div>
+        <hr>
+        <div class="form-group">
+            <label>Room ID</label>
+            <input type="number" id="restRoomId" placeholder="Nhập ID phòng...">
+        </div>
+        <div class="btn-group">
+            <button class="btn-primary" onclick="getHistory()">Lấy lịch sử (Get History)</button>
+        </div>
+    </div>
+
+    <!-- WEBSOCKET TEST -->
+    <div class="card">
+        <h2>3. WebSocket Controller 
+            <span id="wsStatus" class="status-badge status-disconnected">Disconnected</span>
+        </h2>
+        <div class="btn-group" style="margin-bottom: 20px;">
+            <button class="btn-success" onclick="connectWS()">Kết nối (Connect)</button>
+            <button class="btn-danger" onclick="disconnectWS()">Ngắt kết nối (Disconnect)</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Room ID để Subscribe/Action</label>
+            <input type="number" id="wsRoomId" placeholder="ID phòng...">
+        </div>
+        <div class="btn-group" style="margin-bottom: 15px;">
+            <button class="btn-warning" onclick="subscribeRoom()">Lắng nghe phòng này (Subscribe)</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Nội dung tin nhắn / Ghi chú</label>
+            <textarea id="wsMessage" rows="2" placeholder="Nhập nội dung..."></textarea>
+        </div>
+        <div class="btn-group">
+            <button class="btn-primary" onclick="sendWSMessage()">Gửi tin nhắn (Chat)</button>
+            <button class="btn-success" onclick="claimRoom()">Nhận phòng (Claim)</button>
+            <button class="btn-warning" onclick="addNote()">Ghi chú nội bộ (Note)</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Nhật ký (Logs)</h2>
+        <button onclick="clearLogs()" style="background: #666; font-size: 0.8em;">Xóa Log</button>
+    </div>
+    <div id="log-container"></div>
+</div>
+
+<script>
+    let stompClient = null;
+    let subscriptions = {};
+
+    function log(message, type = 'rest') {
+        const container = document.getElementById('log-container');
+        const entry = document.createElement('div');
+        entry.className = `log-entry`;
+        const time = new Date().toLocaleTimeString();
+        
+        let typeClass = `log-type-${type}`;
+        entry.innerHTML = `<span class="log-time">[${time}]</span><span class="${typeClass}">[${type.toUpperCase()}]</span> ${message}`;
+        
+        container.prepend(entry);
+    }
+
+    function clearLogs() { document.getElementById('log-container').innerHTML = ''; }
+
+    // --- REST API FUNCTIONS ---
+    async function getRooms() {
+        const baseUrl = document.getElementById('baseUrl').value;
+        const token = document.getElementById('token').value;
+        const status = document.getElementById('roomStatus').value;
+
+        try {
+            log(`Đang gọi: GET /api/chat/rooms?status=${status}...`);
+            const response = await fetch(`${baseUrl}/api/chat/rooms?status=${status}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            log(`Kết quả lấy DS phòng: ${JSON.stringify(data, null, 2)}`);
+        } catch (e) {
+            log(`Lỗi REST: ${e.message}`, 'error');
+        }
+    }
+
+    async function getHistory() {
+        const baseUrl = document.getElementById('baseUrl').value;
+        const token = document.getElementById('token').value;
+        const roomId = document.getElementById('restRoomId').value;
+
+        if(!roomId) return alert("Vui lòng nhập Room ID!");
+
+        try {
+            log(`Đang gọi: GET /api/chat/rooms/${roomId}/messages...`);
+            const response = await fetch(`${baseUrl}/api/chat/rooms/${roomId}/messages`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            log(`Kết quả lịch sử tin nhắn: ${JSON.stringify(data, null, 2)}`);
+        } catch (e) {
+            log(`Lỗi REST: ${e.message}`, 'error');
+        }
+    }
+
+    // --- WEBSOCKET FUNCTIONS ---
+    function connectWS() {
+        const baseUrl = document.getElementById('baseUrl').value;
+        const token = document.getElementById('token').value;
+
+        if(!token) return alert("Vui lòng nhập Token trước!");
+
+        log("Đang kết nối WebSocket...", 'ws');
+        const socket = new SockJS(`${baseUrl}/ws`);
+        stompClient = Stomp.over(socket);
+
+        stompClient.debug = null;
+
+        stompClient.connect({ 'Authorization': `Bearer ${token}` }, function(frame) {
+            document.getElementById('wsStatus').className = 'status-badge status-connected';
+            document.getElementById('wsStatus').innerText = 'Connected';
+            log(`WebSocket connected: ${frame.headers['user-name'] || 'OK'}`, 'ws');
+
+            stompClient.subscribe('/topic/chat/rooms', function(msg) {
+                log(`[NOTIFY] Có thay đổi DS phòng: ${msg.body}`, 'ws');
+            });
+            log("Đã tự động lắng nghe: /topic/chat/rooms", 'ws');
+
+        }, function(error) {
+            log(`Lỗi WS: ${error}`, 'error');
+            document.getElementById('wsStatus').className = 'status-badge status-disconnected';
+            document.getElementById('wsStatus').innerText = 'Error';
+        });
+    }
+
+    function disconnectWS() {
+        if(stompClient) {
+            stompClient.disconnect();
+            document.getElementById('wsStatus').className = 'status-badge status-disconnected';
+            document.getElementById('wsStatus').innerText = 'Disconnected';
+            log("Đã ngắt kết nối WebSocket", 'ws');
+        }
+    }
+
+    function subscribeRoom() {
+        const roomId = document.getElementById('wsRoomId').value;
+        if(!roomId || !stompClient) return alert("Cần Connect và nhập Room ID!");
+
+        stompClient.subscribe(`/topic/chat/${roomId}`, function(msg) {
+            log(`[ROOM ${roomId}] Tin nhắn mới: ${msg.body}`, 'ws');
+        });
+
+        stompClient.subscribe(`/topic/chat/${roomId}/internal`, function(msg) {
+            log(`[INTERNAL ${roomId}] Ghi chú: ${msg.body}`, 'ws');
+        });
+
+        log(`Đã lắng nghe Room ${roomId} (Cả tin nhắn và ghi chú nội bộ)`, 'ws');
+    }
+
+    function sendWSMessage() {
+        const roomId = document.getElementById('wsRoomId').value;
+        const content = document.getElementById('wsMessage').value;
+        if(!stompClient) return alert("Chưa kết nối!");
+
+        const payload = { content: content, roomId: roomId ? parseInt(roomId) : null };
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(payload));
+        log(`Đã gửi tin nhắn đến /app/chat.sendMessage: ${content}`, 'ws');
+    }
+
+    function claimRoom() {
+        const roomId = document.getElementById('wsRoomId').value;
+        if(!roomId || !stompClient) return alert("Cần Room ID!");
+
+        stompClient.send(`/app/chat.claimRoom.${roomId}`, {}, JSON.stringify({}));
+        log(`Đã gửi lệnh nhận phòng (Claim) cho Room ${roomId}`, 'ws');
+    }
+
+    function addNote() {
+        const roomId = document.getElementById('wsRoomId').value;
+        const content = document.getElementById('wsMessage').value;
+        if(!roomId || !content || !stompClient) return alert("Cần Room ID và nội dung!");
+
+        stompClient.send(`/app/chat.addNote.${roomId}`, {}, JSON.stringify({ content: content }));
+        log(`Đã gửi ghi chú nội bộ cho Room ${roomId}: ${content}`, 'ws');
+    }
+</script>
+
+</body>
+</html>
