@@ -10,4 +10,6 @@ import java.util.List;
 public interface UserPreferenceRepository extends JpaRepository<UserPreference, Long> {
     @EntityGraph(attributePaths = {"category"})
     List<UserPreference> findByUserId(Long userId);
+
+
 }

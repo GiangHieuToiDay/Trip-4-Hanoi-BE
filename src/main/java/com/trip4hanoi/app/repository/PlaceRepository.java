@@ -20,4 +20,15 @@ public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecifi
     List<Place> findAllByDeletedFalse();
     Optional<Place> findByNameAndDeletedFalse(String name);
     Optional<Place> findByName(String name);
+
+    // --- DASHBOARD QUERIES ---
+    @Query(value = "SELECT id, name, (favorite_count * 2 + (SELECT COUNT(*) FROM reviews WHERE place_id = p.id)) as score, view_count, rating_avg " +
+            "FROM places p WHERE deleted = false ORDER BY score DESC LIMIT 10", nativeQuery = true)
+    List<Object[]> findTop10PopularPlaces();
+
+    @Query("SELECT p FROM Place p WHERE p.viewCount = 0 AND p.favoriteCount = 0 AND p.deleted = false")
+    List<Place> findAbandonedPlaces();
+
+    @Query("SELECT c.name, AVG(p.ratingAvg) FROM Place p JOIN p.category c GROUP BY c.name")
+    List<Object[]> getAverageRatingByCategory();
 }

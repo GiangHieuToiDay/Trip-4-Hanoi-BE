@@ -1,9 +1,11 @@
 package com.trip4hanoi.app.repository;
 
+import com.trip4hanoi.app.dto.res.dashboard.LocationCoordinateDTO;
 import com.trip4hanoi.app.entity.UserLocationHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,4 +23,9 @@ public interface UserLocationHistoryRepository extends JpaRepository<UserLocatio
            "GROUP BY ulh.district " +
            "ORDER BY COUNT(ulh.id) DESC")
     List<String> findTopDistricts(Long userId, LocalDateTime since);
+
+    // --- DASHBOARD QUERIES ---
+    @Query("SELECT new com.trip4hanoi.app.dto.res.dashboard.LocationCoordinateDTO(ulh.latitude, ulh.longitude) " +
+            "FROM UserLocationHistory ulh WHERE ulh.createdAt > :since")
+    List<LocationCoordinateDTO> getHeatmapData(@Param("since") LocalDateTime since);
 }

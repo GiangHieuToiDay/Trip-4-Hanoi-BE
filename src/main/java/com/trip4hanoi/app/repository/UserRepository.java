@@ -28,4 +28,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllByRoleId(@Param("roleId") Long roleId);
 
     User findByVerificationCode(String verificationCode);
+
+    // --- DASHBOARD QUERIES ---
+    @Query("SELECT r.name, COUNT(u.id) FROM User u JOIN u.roles r GROUP BY r.name")
+    List<Object[]> countUsersByRole();
+
+    @Query("SELECT COUNT(DISTINCT u.id) FROM User u WHERE EXISTS " +
+            "(SELECT 1 FROM Itinerary i WHERE i.user.id = u.id) OR " +
+            "EXISTS (SELECT 1 FROM Post p WHERE p.user.id = u.id)")
+    long countConvertedUsers();
 }

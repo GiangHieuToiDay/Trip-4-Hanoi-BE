@@ -28,4 +28,18 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             "AND (:placeId IS NULL OR e.place.id = :placeId) " +
             "AND (e.endTime >= :now)")
     Page<Event> searchEventsUser(@Param("keyword") String keyword, @Param("placeId") Long placeId, @Param("now") java.time.LocalDateTime now, Pageable pageable);
+
+    //=============================================================================================
+    //DASHBOARD
+
+    // Thống kê sự kiện hot dựa trên lượng tương tác
+    @Query(value = "SELECT e.id, e.name, " +
+            "((SELECT COUNT(*) FROM user_event_follows WHERE event_id = e.id) + " +
+            "(SELECT COUNT(*) FROM event_subscriptions WHERE event_id = e.id)) as hotness, " +
+            "e.start_time, e.end_time " +
+            "FROM events e WHERE e.deleted = false ORDER BY hotness DESC LIMIT 10", nativeQuery = true)
+    List<Object[]> findTopHotEvents();
+
+
+
 }
