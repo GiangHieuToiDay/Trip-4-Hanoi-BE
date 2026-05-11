@@ -32,8 +32,8 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     @Cacheable(value = "personalized_recommendations", 
-               key = "T(SecurityContextHolder).getContext().getAuthentication()?.getPrincipal() instanceof T(Jwt) ? " +
-                     "T(SecurityContextHolder).getContext().getAuthentication().getPrincipal().getClaims().get('id') + '_' + #limit : 'guest_' + #limit")
+               key =  "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication()?.getPrincipal() instanceof T(org.springframework.security.oauth2.jwt.Jwt) ? " +
+                       "T(org.springframework.security.core.context.SecurityContextHolder).getContext().getAuthentication().getPrincipal().getClaims().get('id') + '_' + #limit : 'guest_' + #limit")
     public List<PlaceResponse> getPersonalizedRecommendations(int limit) {
         Long userId = getCurrentUserId();
         

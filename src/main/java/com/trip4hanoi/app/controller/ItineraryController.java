@@ -7,6 +7,7 @@ import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
 import com.trip4hanoi.app.service.ItineraryService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ import java.util.List;
 public class ItineraryController {
     private final ItineraryService itineraryService;
 
-    //@Operation(summary = "Create itinerary", description = "API create itinerary for user")
+    @Operation(summary = "Create itinerary", description = "API create itinerary for user")
     @PostMapping("/create")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> createItinerary(
@@ -50,7 +51,7 @@ public class ItineraryController {
 //        return ResponseEntity.ok(itineraryService.addPlaceToItinerary(request));
 //    }
 
-    //@Operation(summary = "Add place to itinerary", description = "API add place into itinerary")
+    @Operation(summary = "Add place to itinerary", description = "API add place into itinerary")
     @PostMapping("/add-place")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<ItineraryResponse>> addPlaceToItinerary(
@@ -74,7 +75,7 @@ public class ItineraryController {
 //        return ResponseEntity.ok(itineraryService.getUserItineraries(userId));
 //    }
 
-    //@Operation(summary = "Get user itineraries", description = "API get all itineraries of a user")
+    @Operation(summary = "Get user itineraries", description = "API get all itineraries of a user")
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<APIResponse<List<ItineraryResponse>>> getUserItineraries(
