@@ -59,7 +59,7 @@ app:
   init:
     admin-password: ${ADMIN_PASSWORD:123456}
     staff-password: ${STAFF_PASSWORD:123456}
-  baseurl: http://192.168.1.239:8080
-
+#  baseurl: http://192.168.1.239:8080
+  baseurl: http://localhost:8080
 google:
   client-id: ${CLIENT-ID}

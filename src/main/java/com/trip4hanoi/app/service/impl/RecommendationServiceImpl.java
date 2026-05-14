@@ -88,9 +88,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         double score = place.getRatingAvg() != null ? place.getRatingAvg() : 0.0;
 
         // Cộng 2 điểm nếu ở Quận hay đi (Hot Zone)
-        if (!topDistricts.isEmpty() && topDistricts.get(0).equalsIgnoreCase(place.getDistrict())) {
+        if (!topDistricts.isEmpty() && topDistricts.get(0) != null && topDistricts.get(0).equalsIgnoreCase(place.getDistrict())) {
             score += 2.0;
-        } else if (topDistricts.contains(place.getDistrict())) {
+        } else if (place.getDistrict() != null && topDistricts.contains(place.getDistrict())) {
             score += 1.0;
         }
 

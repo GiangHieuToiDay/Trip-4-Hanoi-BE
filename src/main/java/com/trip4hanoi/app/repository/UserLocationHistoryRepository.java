@@ -19,10 +19,12 @@ public interface UserLocationHistoryRepository extends JpaRepository<UserLocatio
     void deleteOlderThan(LocalDateTime expiryDate);
 
     @Query("SELECT ulh.district FROM UserLocationHistory ulh " +
-           "WHERE ulh.user.id = :userId AND ulh.createdAt > :since " +
+           "WHERE ulh.user.id = :userId AND ulh.createdAt > :since AND ulh.district IS NOT NULL " +
            "GROUP BY ulh.district " +
            "ORDER BY COUNT(ulh.id) DESC")
     List<String> findTopDistricts(Long userId, LocalDateTime since);
+
+    List<UserLocationHistory> findAllByDistrictIsNull();
 
     // --- DASHBOARD QUERIES ---
     @Query("SELECT new com.trip4hanoi.app.dto.res.dashboard.LocationCoordinateDTO(ulh.latitude, ulh.longitude) " +

@@ -30,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserLocationHistoryRepository userLocationHistoryRepository;
+    private final com.trip4hanoi.app.service.GeocodingService geocodingService;
 
     @Value("${app.init.admin-password:123456}")
     private String adminPassword;
@@ -42,7 +43,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         log.info("Starting Data Initialization...");
 
-
+        updateNullDistricts();
         createPermissions();
         createRoles();
         createAccounts();
@@ -245,6 +246,21 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(user);
             log.info("Created default account: {} / {}", email, password);
         }
+    }
+
+    private void updateNullDistricts() {
+        List<UserLocationHistory> nullDistricts = userLocationHistoryRepository.findAllByDistrictIsNull();
+        if (nullDistricts.isEmpty()) return;
+
+        log.info("Found {} records with null district. Starting migration...", nullDistricts.size());
+        for (UserLocationHistory history : nullDistricts) {
+            String district = geocodingService.getDistrictFromCoords(history.getLatitude(), history.getLongitude());
+            if (district != null) {
+                history.setDistrict(district);
+                userLocationHistoryRepository.save(history);
+            }
+        }
+        log.info("Migration completed.");
     }
 
     private void createTravelData() {

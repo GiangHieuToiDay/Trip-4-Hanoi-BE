@@ -20,6 +20,7 @@ public class UserLocationServiceImpl implements UserLocationService {
 
     private final UserLocationHistoryRepository locationHistoryRepository;
     private final UserRepository userRepository;
+    private final com.trip4hanoi.app.service.GeocodingService geocodingService;
 
     @Override
     @Transactional
@@ -28,6 +29,13 @@ public class UserLocationServiceImpl implements UserLocationService {
             return;
         }
 
+        // Tự động xác định quận nếu bị null
+        String finalDistrict = district;
+        if (finalDistrict == null || finalDistrict.trim().isEmpty()) {
+            finalDistrict = geocodingService.getDistrictFromCoords(lat, lng);
+        }
+
+        String finalDistrictToSave = finalDistrict;
         userRepository.findById(userId).ifPresent(user -> {
             // Kiểm tra quyền riêng tư của User
             if (Boolean.FALSE.equals(user.getIsLocationTrackingEnabled())) {
@@ -40,10 +48,10 @@ public class UserLocationServiceImpl implements UserLocationService {
                     .latitude(lat)
                     .longitude(lng)
                     .actionType(actionType)
-                    .district(district)
+                    .district(finalDistrictToSave)
                     .build();
             locationHistoryRepository.save(history);
-            log.debug("Saved location history for user {}: {}, {} ({})", userId, lat, lng, actionType);
+            log.debug("Saved location history for user {}: {}, {} ({}) in {}", userId, lat, lng, actionType, finalDistrictToSave);
         });
     }
 
