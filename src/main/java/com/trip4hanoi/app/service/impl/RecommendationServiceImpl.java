@@ -62,6 +62,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         //  Thông tin người dùng
         List<String> topDistricts = locationHistoryRepository.findTopDistricts(userId, LocalDateTime.now().minusDays(15));
         Set<Long> preferredCategoryIds = userPreferenceRepository.findByUserId(userId).stream()
+                .filter(up -> up.getCategory() != null)
                 .map(up -> up.getCategory().getId())
                 .collect(Collectors.toSet());
 
@@ -75,7 +76,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                 .limit(limit)
                 .map(ps -> {
                     PlaceResponse res = placeMapper.toPlaceResponse(ps.getPlace());
-                    if (preferredCategoryIds.contains(ps.getPlace().getCategory().getId())) {
+                    if (ps.getPlace().getCategory() != null && preferredCategoryIds.contains(ps.getPlace().getCategory().getId())) {
                         res.setIsRecommended(true);
                     }
                     res.setHasActiveEvent(placeIdsWithEvents.contains(ps.getPlace().getId()));
@@ -95,7 +96,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         // Cộng 1.5 điểm nếu thuộc Category yêu thích
-        if (preferredCategoryIds.contains(place.getCategory().getId())) {
+        if (place.getCategory() != null && preferredCategoryIds.contains(place.getCategory().getId())) {
             score += 1.5;
         }
 

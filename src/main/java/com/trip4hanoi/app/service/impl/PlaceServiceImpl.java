@@ -416,7 +416,10 @@ public class PlaceServiceImpl implements PlaceService {
         var context = SecurityContextHolder.getContext();
         var authentication = context.getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-            return (Long) jwt.getClaims().get("id");
+            Object idClaim = jwt.getClaims().get("id");
+            if (idClaim instanceof Number n) {
+                return n.longValue();
+            }
         }
         return 0L;
     }

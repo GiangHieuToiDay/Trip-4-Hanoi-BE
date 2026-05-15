@@ -1,9 +1,6 @@
 package com.trip4hanoi.app.service.impl;
 
-import com.trip4hanoi.app.dto.req.ItineraryDayRequest;
-import com.trip4hanoi.app.dto.req.ItineraryPlaceRequest;
-import com.trip4hanoi.app.dto.req.ItineraryRequest;
-import com.trip4hanoi.app.dto.req.ItineraryUpdateFullRequest;
+import com.trip4hanoi.app.dto.req.*;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
@@ -39,6 +36,7 @@ public class ItineraryServiceImpl implements ItineraryService {
     private final ItineraryPlaceMapper itineraryPlaceMapper;
     private final EventRepository eventRepository;
     private final UserLocationHistoryRepository userLocationHistoryRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -90,8 +88,12 @@ public class ItineraryServiceImpl implements ItineraryService {
         //Chỉ lấy những địa điểm chưa bị xóa
         List<Place> allPossiblePlaces = placeRepository.findAllByDeletedFalse();
 
-        // Gợi ý thông minh
-        List<PlaceResponse> recommendedPlaces = recommendationService.getPersonalizedRecommendations(50);
+        // Gợi ý thông minh - Fix ClassCastException from Cache
+        List<?> rawRecommendations = recommendationService.getPersonalizedRecommendations(50);
+        List<PlaceResponse> recommendedPlaces = rawRecommendations.stream()
+                .map(item -> objectMapper.convertValue(item, PlaceResponse.class))
+                .collect(Collectors.toList());
+        
         Set<Long> recommendedIds = recommendedPlaces.stream().map(PlaceResponse::getId).collect(Collectors.toSet());
 
         // Lấy vị trí gần nhất của user làm điểm khởi hành
@@ -135,6 +137,7 @@ public class ItineraryServiceImpl implements ItineraryService {
                     List<Place> candidates = allPossiblePlaces.stream()
                             .filter(pl -> !usedPlaces.contains(pl))
                             .filter(pl -> {
+                                if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
                                 String cat = pl.getCategory().getName().toLowerCase();
                                 boolean matchesTarget = slotTargets.stream().anyMatch(t -> cat.contains(t.toLowerCase()) || t.toLowerCase().contains(cat));
                                 int maxPerSession = 1; // Mỗi loại chỉ xuất hiện 1 lần/buổi
@@ -146,19 +149,22 @@ public class ItineraryServiceImpl implements ItineraryService {
                     if (candidates.isEmpty()) {
                         candidates = allPossiblePlaces.stream()
                                 .filter(pl -> !usedPlaces.contains(pl))
-                                .filter(pl -> !pl.getCategory().getName().equalsIgnoreCase(finalLastCategory))
+                                .filter(pl -> {
+                                    if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
+                                    return !pl.getCategory().getName().equalsIgnoreCase(finalLastCategory);
+                                })
                                 .collect(Collectors.toList());
                     }
 
                     if (candidates.isEmpty()) break;
-
 
                     // Xác định ngày hiện tại của lịch trình
                     LocalDate travelDate = (request.getStartDate() != null) ? request.getStartDate().plusDays(day -1) : LocalDate.now().plusDays(day-1);
                     // Scoring
                     List<PlaceScore> scoredPlaces = candidates.stream()
                             .map(pl -> {
-                                double prefMatch = preferredCategoryNames.stream().anyMatch(c -> c.equalsIgnoreCase(pl.getCategory().getName())) ? 1.0 : 0.0;
+                                String plCatName = (pl.getCategory() != null) ? pl.getCategory().getName() : "";
+                                double prefMatch = preferredCategoryNames.stream().anyMatch(c -> c.equalsIgnoreCase(plCatName)) ? 1.0 : 0.0;
                                 double ratingScore = (pl.getRatingAvg() != null ? pl.getRatingAvg() : 0.0) / 5.0;
                                 int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
                                 double budgetFit = 1.0 - Math.min(1.0, Math.abs(price - budgetPerPlaceTarget) / (budgetPerPlaceTarget + 1));
@@ -533,6 +539,68 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         Itinerary updated = itineraryRepository.findByIdWithPlaces(itinerary.getId());
         return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public ItineraryResponse saveAIItinerary(SaveAIItineraryRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Itinerary itinerary = Itinerary.builder()
+                .title(request.getTitle())
+                .user(user)
+                .budget(0) // Will calculate below
+                .days(1)
+                .numberOfPeople(1)
+                .build();
+
+        itinerary = itineraryRepository.save(itinerary);
+
+        List<ItineraryPlace> itineraryPlaces = new ArrayList<>();
+        int totalCost = 0;
+        int orderIndex = 1;
+
+        for (var item : request.getTimeline()) {
+            if (item.getPlaceId() == null) continue;
+
+            Place place = placeRepository.findById(item.getPlaceId())
+                    .orElse(null);
+            
+            if (place == null) continue;
+
+            int cost = item.getEstimatedCost() != null ? item.getEstimatedCost() : 
+                      (place.getPriceAvg() != null ? place.getPriceAvg() : 0);
+            
+            totalCost += cost;
+
+            // Map time to session
+            String session = "Morning";
+            if (item.getTime() != null) {
+                String timeStr = item.getTime().toLowerCase();
+                if (timeStr.contains("11:") || timeStr.contains("12:") || timeStr.contains("13:")) session = "Noon";
+                else if (timeStr.contains("14:") || timeStr.contains("15:") || timeStr.contains("16:") || timeStr.contains("17:")) session = "Afternoon";
+                else if (timeStr.contains("18:") || timeStr.contains("19:") || timeStr.contains("20:") || timeStr.contains("21:") || timeStr.contains("22:")) session = "Evening";
+            }
+
+            ItineraryPlace ip = ItineraryPlace.builder()
+                    .itinerary(itinerary)
+                    .place(place)
+                    .dayNumber(1)
+                    .orderIndex(orderIndex++)
+                    .session(session)
+                    .estimatedCost(cost)
+                    .build();
+            
+            itineraryPlaces.add(ip);
+        }
+
+        itineraryPlaceRepository.saveAll(itineraryPlaces);
+        itinerary.setBudget(totalCost);
+        itinerary.setItineraryPlaces(itineraryPlaces);
+        itineraryRepository.save(itinerary);
+
+        return itineraryMapper.toItineraryResponse(itinerary);
     }
 
     @Override

@@ -32,7 +32,7 @@ public class ItineraryController {
             @Valid
             @RequestBody ItineraryRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long userId = jwt.getClaim("id");
+        Long userId = jwt.getClaim("id") instanceof Number n ? n.longValue() : null;
         ItineraryResponse itinerary = itineraryService.createItinerary(request, userId);
 
         APIResponse<ItineraryResponse> response = APIResponse.<ItineraryResponse>builder()
@@ -173,6 +173,24 @@ public class ItineraryController {
                 .status(HttpStatus.OK.value())
                 .code(1000)
                 .message("Updated full itinerary")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/save-ai")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<ItineraryResponse>> saveAIItinerary(
+            @RequestBody com.trip4hanoi.app.dto.req.SaveAIItineraryRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
+        ItineraryResponse result = itineraryService.saveAIItinerary(request, userId);
+
+        APIResponse<ItineraryResponse> response = APIResponse.<ItineraryResponse>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully saved AI itinerary")
                 .data(result)
                 .build();
 
