@@ -405,6 +405,20 @@ public class PlaceServiceImpl implements PlaceService {
 
         //  Check Active Event
         dto.setHasActiveEvent(checkActiveEvent(entity));
+
+        // Deduplicate events by Name and StartTime (Backend defense)
+        if (dto.getEvents() != null) {
+            List<com.trip4hanoi.app.dto.res.EventResponse> uniqueEvents = dto.getEvents().stream()
+                .collect(Collectors.collectingAndThen(
+                    Collectors.toMap(
+                        e -> e.getName() + "|" + e.getStartTime(),
+                        e -> e,
+                        (existing, replacement) -> existing
+                    ),
+                    m -> new ArrayList<>(m.values())
+                ));
+            dto.setEvents(uniqueEvents);
+        }
     }
 
     private boolean checkActiveEvent(Place entity) {

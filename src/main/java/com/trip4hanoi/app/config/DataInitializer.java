@@ -66,7 +66,16 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initEventTestData() {
-        if (eventRepository.count() > 5) return; // Đã có đủ dữ liệu test
+        // Kiểm tra chính xác theo tên sự kiện, không đếm tổng số lượng nữa
+        String eventName = "Triển lãm Nghệ thuật Sáng tạo Hà Nội";
+        Optional<Event> existingEvent = eventRepository.findAll().stream()
+                .filter(e -> e.getName().equalsIgnoreCase(eventName))
+                .findFirst();
+        
+        if (existingEvent.isPresent()) {
+            log.info("Event '{}' already exists. Skipping initialization.", eventName);
+            return;
+        }
 
         log.info("Initializing multi-image event for gallery testing...");
         
@@ -74,7 +83,7 @@ public class DataInitializer implements CommandLineRunner {
         if (hoanKiem == null) return;
 
         Event event = Event.builder()
-                .name("Triển lãm Nghệ thuật Sáng tạo Hà Nội")
+                .name(eventName)
                 .description("Một không gian trưng bày các tác phẩm nghệ thuật đương đại lấy cảm hứng từ nhịp sống Thủ đô. \n\nSự kiện quy tụ hơn 50 nghệ sĩ trẻ với những góc nhìn mới lạ về Thăng Long ngàn năm văn hiến. Đây là cơ hội để công chúng tiếp cận gần hơn với các loại hình nghệ thuật sắp đặt, hội họa và điêu khắc hiện đại.\n\nThời gian: 08:00 - 21:00 hàng ngày.\nĐịa điểm: Tầng 2, Không gian Văn hóa Nghệ thuật.")
                 .place(hoanKiem)
                 .startTime(LocalDateTime.now().minusDays(2))
