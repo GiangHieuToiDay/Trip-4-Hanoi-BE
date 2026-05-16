@@ -44,6 +44,20 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * ENDPOINT - USER: Lấy chi tiết sự kiện
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<APIResponse<EventResponse>> getEventById(@PathVariable Long id) {
+        EventResponse event = eventService.getEventById(id);
+        return ResponseEntity.ok(APIResponse.<EventResponse>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved event detail")
+                .data(event)
+                .build());
+    }
+
 
     /**
      * ENDPOINT - USER: Theo dõi sự kiện
@@ -62,6 +76,24 @@ public class EventController {
                 .data("Followed successfully")
                 .build();
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * ENDPOINT - USER: Bỏ theo dõi sự kiện
+     */
+    @DeleteMapping("/{id}/unfollow")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<String>> unfollowEvent(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
+        eventService.unfollowEvent(id, userId);
+        return ResponseEntity.ok(APIResponse.<String>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Unfollowed successfully")
+                .data("Unfollowed successfully")
+                .build());
     }
 
 

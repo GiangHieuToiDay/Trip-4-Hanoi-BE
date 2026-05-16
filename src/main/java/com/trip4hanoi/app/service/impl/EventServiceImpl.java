@@ -16,7 +16,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,21 +43,38 @@ public class EventServiceImpl implements EventService {
     private final com.trip4hanoi.app.service.CloudinaryService cloudinaryService;
 
     /**
+     * Helper to get current userId from SecurityContext
+     */
+    private Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+            return (Long) jwt.getClaims().get("id");
+        }
+        return null;
+    }
+
+    /**
      * ENDPOINT - USER: Lấy danh sách sự kiện đang và sắp diễn ra (Phân trang)
-     * @param keyword
-     * @param placeId
-     * @param page
-     * @param size
-     * @return
      */
     @Override
     public PageResponse<EventResponse> getAllEventsUser(String keyword, Long placeId, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").ascending());
-        LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         Page<Event> eventPage = eventRepository.searchEventsUser(keyword, placeId, now, pageable);
 
+        Long currentUserId = getCurrentUserId();
+
         List<EventResponse> data = eventPage.getContent().stream()
-                .map(eventMapper::toEventResponse)
+                .map(event -> {
+                    EventResponse res = eventMapper.toEventResponse(event);
+                    res.setFollowCount(userEventFollowRepository.countByEventId(event.getId()));
+                    if (currentUserId != null) {
+                        res.setIsFollowed(userEventFollowRepository.existsByUserIdAndEventId(currentUserId, event.getId()));
+                    } else {
+                        res.setIsFollowed(false);
+                    }
+                    return res;
+                })
                 .collect(Collectors.toList());
 
         return PageResponse.from(eventPage, data);
@@ -69,6 +88,11 @@ public class EventServiceImpl implements EventService {
 
         Event event = eventRepository.findById(request.getEventId())
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        // Kiểm tra xem đã follow chưa để tránh duplicate
+        if (userEventFollowRepository.existsByUserIdAndEventId(userId, request.getEventId())) {
+            return;
+        }
 
         UserEventFollow follow = UserEventFollow.builder()
                 .user(user)
@@ -93,11 +117,14 @@ public class EventServiceImpl implements EventService {
     }
 
 
+    @Override
+    @Transactional
+    public void unfollowEvent(Long eventId, Long userId) {
+        userEventFollowRepository.deleteByUserIdAndEventId(userId, eventId);
+    }
+
     /**
      * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
-     * @param request
-     * @param images
-     * @return
      */
     @Override
     @Transactional
@@ -126,15 +153,14 @@ public class EventServiceImpl implements EventService {
             }
         }
 
-        return eventMapper.toEventResponse(eventRepository.save(event));
+        EventResponse response = eventMapper.toEventResponse(eventRepository.save(event));
+        response.setFollowCount(0L);
+        response.setIsFollowed(false);
+        return response;
     }
 
     /**
      * ENDPOINT - ADMIN: Cập nhật sự kiện và quản lý album ảnh
-     * @param id
-     * @param request
-     * @param images
-     * @return
      */
     @Override
     @Transactional
@@ -209,8 +235,14 @@ public class EventServiceImpl implements EventService {
             }
         }
 
-
-        return eventMapper.toEventResponse(eventRepository.save(event));
+        Event savedEvent = eventRepository.save(event);
+        EventResponse response = eventMapper.toEventResponse(savedEvent);
+        response.setFollowCount(userEventFollowRepository.countByEventId(id));
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId != null) {
+            response.setIsFollowed(userEventFollowRepository.existsByUserIdAndEventId(currentUserId, id));
+        }
+        return response;
     }
 
     @Override
@@ -225,11 +257,6 @@ public class EventServiceImpl implements EventService {
 
     /**
      * ENDPOINT - ADMIN: Lấy tất cả sự kiện (bao gồm đã xóa mềm) cho dashboard
-     * @param keyword
-     * @param placeId
-     * @param page
-     * @param size
-     * @return
      */
     @Override
     public PageResponse<EventResponse> getAllEventsAdmin(String keyword, Long placeId, int page, int size) {
@@ -237,10 +264,31 @@ public class EventServiceImpl implements EventService {
         Page<Event> eventPage = eventRepository.searchEventsAdmin(keyword, placeId, pageable);
 
         List<EventResponse> data = eventPage.getContent().stream()
-                .map(eventMapper::toEventResponse)
+                .map(event -> {
+                    EventResponse res = eventMapper.toEventResponse(event);
+                    res.setFollowCount(userEventFollowRepository.countByEventId(event.getId()));
+                    return res;
+                })
                 .collect(Collectors.toList());
 
         return PageResponse.from(eventPage, data);
     }
 
+    @Override
+    public EventResponse getEventById(Long id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+        
+        EventResponse response = eventMapper.toEventResponse(event);
+        response.setFollowCount(userEventFollowRepository.countByEventId(id));
+        
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId != null) {
+            response.setIsFollowed(userEventFollowRepository.existsByUserIdAndEventId(currentUserId, id));
+        } else {
+            response.setIsFollowed(false);
+        }
+        
+        return response;
+    }
 }

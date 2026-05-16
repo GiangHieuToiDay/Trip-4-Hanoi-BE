@@ -24,5 +24,6 @@ public class EventResponse {
 
     private String status; // UPCOMING, ONGOING, ENDED
     private List<ImageResponse> images; // Danh sách album ảnh
-
+    private Boolean isFollowed;
+    private Long followCount;
 }

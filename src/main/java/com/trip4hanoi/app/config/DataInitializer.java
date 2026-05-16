@@ -59,7 +59,48 @@ public class DataInitializer implements CommandLineRunner {
         // Khởi tạo dữ liệu Test chuyên sâu cho Itinerary Logic
         initTestData();
 
+        // Khởi tạo dữ liệu Sự kiện với nhiều ảnh để test Gallery
+        initEventTestData();
+
         log.info("Data Initialization Completed Successfully!");
+    }
+
+    private void initEventTestData() {
+        if (eventRepository.count() > 5) return; // Đã có đủ dữ liệu test
+
+        log.info("Initializing multi-image event for gallery testing...");
+        
+        Place hoanKiem = placeRepository.findByName("Kem Tràng Tiền").orElse(null);
+        if (hoanKiem == null) return;
+
+        Event event = Event.builder()
+                .name("Triển lãm Nghệ thuật Sáng tạo Hà Nội")
+                .description("Một không gian trưng bày các tác phẩm nghệ thuật đương đại lấy cảm hứng từ nhịp sống Thủ đô. \n\nSự kiện quy tụ hơn 50 nghệ sĩ trẻ với những góc nhìn mới lạ về Thăng Long ngàn năm văn hiến. Đây là cơ hội để công chúng tiếp cận gần hơn với các loại hình nghệ thuật sắp đặt, hội họa và điêu khắc hiện đại.\n\nThời gian: 08:00 - 21:00 hàng ngày.\nĐịa điểm: Tầng 2, Không gian Văn hóa Nghệ thuật.")
+                .place(hoanKiem)
+                .startTime(LocalDateTime.now().minusDays(2))
+                .endTime(LocalDateTime.now().plusDays(10))
+                .images(new ArrayList<>())
+                .build();
+
+        // Thêm 5 ảnh demo để test Gallery
+        String[] demoImages = {
+            "https://images.unsplash.com/photo-1599708145755-9a84d4df0128?q=80&w=1200",
+            "https://images.unsplash.com/photo-1505944270255-bd2b68af6422?q=80&w=1200",
+            "https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=1200",
+            "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=1200",
+            "https://images.unsplash.com/photo-1464973054946-01620d1cd946?q=80&w=1200"
+        };
+
+        for (int i = 0; i < demoImages.length; i++) {
+            event.getImages().add(EventImage.builder()
+                    .imageUrl(demoImages[i])
+                    .publicId("demo_event_" + i + "_" + UUID.randomUUID())
+                    .event(event)
+                    .build());
+        }
+
+        eventRepository.save(event);
+        log.info("Multi-image event created successfully!");
     }
 
     private void initTestData() {

@@ -14,8 +14,10 @@ import java.util.List;
 public interface EventService {
     PageResponse<EventResponse> getAllEventsUser(String keyword, Long placeId, int page, int size);
     void followEvent(EventFollowRequest request, Long userId);
+    void unfollowEvent(Long eventId, Long userId);
     EventResponse createEvent(EventRequest request, MultipartFile[] images);
     EventResponse updateEvent(Long id, EventRequest request, MultipartFile[] images);
     void deleteEvent(Long id);
     PageResponse<EventResponse> getAllEventsAdmin(String keyword, Long placeId, int page, int size);
+    EventResponse getEventById(Long id);
 }
