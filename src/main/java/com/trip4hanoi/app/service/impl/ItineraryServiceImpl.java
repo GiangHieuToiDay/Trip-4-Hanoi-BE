@@ -46,15 +46,10 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         String trimmedTitle = request.getTitle() != null ? request.getTitle().trim() : "My Itinerary";
         
-        // Tìm lịch trình cũ của chính User này có cùng tên (nếu có)
-        Itinerary itinerary = itineraryRepository.findByUserIdAndTitleIgnoreCase(userId, trimmedTitle)
-                .orElseGet(() -> {
-                    // Nếu không thấy, mới tạo đối tượng mới
-                    Itinerary newItinerary = itineraryMapper.toItinerary(request);
-                    newItinerary.setTitle(trimmedTitle);
-                    newItinerary.setUser(user);
-                    return newItinerary;
-                });
+        // Luôn tạo đối tượng mới để mỗi lần tạo là một lịch trình riêng biệt
+        Itinerary itinerary = itineraryMapper.toItinerary(request);
+        itinerary.setTitle(trimmedTitle);
+        itinerary.setUser(user);
 
         itinerary.setBudget(request.getBudget());
         itinerary.setDays(request.getDays());

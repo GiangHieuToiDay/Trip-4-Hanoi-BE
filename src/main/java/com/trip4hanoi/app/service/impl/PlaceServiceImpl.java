@@ -17,6 +17,7 @@ import com.trip4hanoi.app.repository.PlaceSpecification;
 import com.trip4hanoi.app.repository.UserPreferenceRepository;
 import com.trip4hanoi.app.service.PlaceService;
 import com.trip4hanoi.app.service.UserLocationService;
+import com.trip4hanoi.app.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -111,6 +112,13 @@ public class PlaceServiceImpl implements PlaceService {
         
         place.setImages(new java.util.ArrayList<>());
         
+        // Generate search vector
+        place.setSearchVector(StringUtil.generateSearchVector(
+                place.getName(), 
+                place.getAddress(), 
+                place.getCategory() != null ? place.getCategory().getName() : ""
+        ));
+
         // Upload images to Cloudinary (folder places)
         if (images != null && images.length > 0) {
             for (MultipartFile img : images) {
@@ -156,6 +164,13 @@ public class PlaceServiceImpl implements PlaceService {
         }
 
         placeMapper.updatePlace(place, request);
+
+        // Update search vector
+        place.setSearchVector(StringUtil.generateSearchVector(
+                place.getName(),
+                place.getAddress(),
+                place.getCategory() != null ? place.getCategory().getName() : ""
+        ));
 
         // Xử lý album ảnh
         List<PlaceImage> currentImages = place.getImages();

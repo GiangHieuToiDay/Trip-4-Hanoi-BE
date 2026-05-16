@@ -69,4 +69,7 @@ public class Place {
 
     @Builder.Default
     private boolean deleted = false;
+
+    @Column(name = "search_vector", columnDefinition = "TEXT")
+    private String searchVector; // Tên + địa chỉ + danh mục không dấu để search
 }

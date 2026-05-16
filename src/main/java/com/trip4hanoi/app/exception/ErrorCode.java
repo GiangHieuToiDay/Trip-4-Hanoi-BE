@@ -19,6 +19,7 @@ public enum ErrorCode {
     EMAIL_EXISTED(1003, "Email already exists", HttpStatus.CONFLICT),
     USER_EXISTED(1002, "User already exists", HttpStatus.CONFLICT),
 
+    USER_NOT_EXISTED(1002, "User already exists", HttpStatus.CONFLICT),
     // USER ERRORS
     USER_NOT_FOUND(1001, "User not found", HttpStatus.NOT_FOUND),
     USERNAME_ALREADY_EXISTS(1002, "Username already exists", HttpStatus.BAD_REQUEST),
