@@ -149,6 +149,10 @@ public class User implements UserDetails {
         return this.email;
     }
 
+    public String getActualUsername() {
+        return this.username;
+    }
+
     @Override
     public boolean isAccountNonExpired() {
         return UserDetails.super.isAccountNonExpired();

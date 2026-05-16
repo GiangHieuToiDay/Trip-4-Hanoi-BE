@@ -123,7 +123,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         UserResponse userResponse = UserResponse.builder()
                 .id(user.getId())
-                .username(user.getUsername())
+                .username(user.getActualUsername())
                 .email(user.getEmail())
                 .roles(roleResponses)
                 .provider(user.getProvider())
@@ -372,7 +372,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         UserResponse userResponse = UserResponse.builder()
                 .id(user.getId())
-                .username(user.getUsername())
+                .username(user.getActualUsername())
                 .email(user.getEmail())
                 .avatar(user.getAvatar())
                 .roles(roleResponses)

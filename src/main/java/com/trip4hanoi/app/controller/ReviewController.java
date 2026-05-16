@@ -53,6 +53,21 @@ public class ReviewController {
         );
     }
 
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<List<ReviewResponse>>> getMyReviews() {
+        List<ReviewResponse> reviews = reviewService.getMyReviews();
+
+        return ResponseEntity.ok(
+                APIResponse.<List<ReviewResponse>>builder()
+                        .status(HttpStatus.OK.value())
+                        .code(1000)
+                        .message("Successfully retrieved my reviews")
+                        .data(reviews)
+                        .build()
+        );
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> deleteReview(@PathVariable Long id) {

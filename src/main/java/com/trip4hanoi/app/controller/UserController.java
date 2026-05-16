@@ -2,6 +2,7 @@ package com.trip4hanoi.app.controller;
 
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trip4hanoi.app.dto.req.ChangePasswordRequest;
 import com.trip4hanoi.app.dto.req.UserCreateRequest;
 import com.trip4hanoi.app.dto.req.UserUpdateRequest;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +33,7 @@ import java.io.IOException;
 public class UserController {
 
     private final UserService userService;
+    private final ObjectMapper objectMapper;
 
 
 
@@ -79,14 +82,16 @@ public class UserController {
 
     @Operation(summary = "Update User", description ="Api update user to database")
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null and authentication.principal.claims['id'] == #request.id)")
+    @PreAuthorize("hasAuthority('MANAGE_USER') or (authentication.principal != null)")
     public ResponseEntity<APIResponse<Void>> updateUser(
-            @RequestPart("data") @Valid UserUpdateRequest request,
+            @RequestPart("data") String requestJson,
             @RequestPart(value = "file" , required = false) MultipartFile file) throws IOException {
 
+        log.info("Received update request JSON: {}", requestJson);
+        UserUpdateRequest request = objectMapper.readValue(requestJson, UserUpdateRequest.class);
 
+        userService.updateUser(request, file);
 
-         userService.updateUser(request, file);
          APIResponse<Void> response = APIResponse.<Void>builder()
                  .status(HttpStatus.ACCEPTED.value())
                  .code(1000)

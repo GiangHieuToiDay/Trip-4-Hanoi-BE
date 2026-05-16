@@ -5,11 +5,9 @@ import com.trip4hanoi.app.entity.SavedPlace;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {PlaceMapper.class})
 public interface SavedPlaceMapper {
 
     @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "place.id", target = "placeId")
-    @Mapping(source = "place.name", target = "placeName")
     SavedPlaceResponse toSavedPlaceResponse(SavedPlace savedPlace);
 }

@@ -62,6 +62,7 @@ public class SavedPlaceServiceImpl implements SavedPlaceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SavedPlaceResponse> getMySavedPlaces() {
         Long userId = getCurrentUserId();
         User user = userRepository.findById(userId)
@@ -73,6 +74,7 @@ public class SavedPlaceServiceImpl implements SavedPlaceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean isPlaceSaved(Long placeId) {
         Long userId = getCurrentUserId();
         if (userId == 0L) return false;

@@ -13,6 +13,8 @@ import com.trip4hanoi.app.repository.ReviewRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,8 +55,29 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getMyReviews() {
+        Long userId = getCurrentUserId();
+        return reviewRepository.findByUserId(userId).stream()
+                .map(reviewMapper::toReviewResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public void deleteReview(Long reviewId) {
         reviewRepository.deleteById(reviewId);
+    }
+
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            Object idClaim = jwt.getClaims().get("id");
+            if (idClaim instanceof Number n) {
+                return n.longValue();
+            }
+        }
+        return 0L;
     }
 }

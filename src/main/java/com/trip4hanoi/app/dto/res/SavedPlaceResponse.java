@@ -9,6 +9,5 @@ import lombok.*;
 public class SavedPlaceResponse {
     private Long id;
     private Long userId;
-    private Long placeId;
-    private String placeName;
+    private PlaceResponse place;
 }

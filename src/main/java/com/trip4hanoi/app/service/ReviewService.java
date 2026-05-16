@@ -7,5 +7,6 @@ import java.util.List;
 public interface ReviewService {
     ReviewResponse createReview(ReviewRequest request, Long userId);
     List<ReviewResponse> getReviewsByPlace(Long placeId);
+    List<ReviewResponse> getMyReviews();
     void deleteReview(Long reviewId);
 }

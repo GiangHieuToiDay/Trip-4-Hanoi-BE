@@ -9,6 +9,7 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
     //MapStruct
+    @Mapping(target = "username", source = "actualUsername")
     UserResponse toUserResponse(User user);
 
     @Mapping(target = "roles", ignore = true)
@@ -16,5 +17,7 @@ public interface UserMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "username", ignore = true)
+    @Mapping(target = "email", ignore = true)
     void updateUser(@MappingTarget User user , UserUpdateRequest request);
 }
