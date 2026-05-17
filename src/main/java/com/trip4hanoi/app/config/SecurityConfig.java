@@ -61,7 +61,8 @@ public class SecurityConfig {
             "/api/events/**",
             "/api/posts/**",
             "/api/categories/**",
-            "/api/comments/post/**"
+            "/api/comments/post/**",
+            "/api/weather"
     };
 
 

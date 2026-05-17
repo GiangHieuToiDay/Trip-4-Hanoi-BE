@@ -2,13 +2,14 @@ package com.trip4hanoi.app.dto.res;
 
 import lombok.*;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PlaceResponse {
+public class PlaceResponse implements Serializable {
     private Long id;
     private String name;
     private String description;

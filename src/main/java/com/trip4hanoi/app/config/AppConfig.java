@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.TimeZone;
 
@@ -31,5 +32,11 @@ public class AppConfig {
         // Sử dụng múi giờ Việt Nam cho toàn hệ thống
         mapper.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         return mapper;
+    }
+
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }

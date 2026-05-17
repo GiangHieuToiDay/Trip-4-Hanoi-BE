@@ -63,3 +63,9 @@ app:
   baseurl: http://localhost:8080
 google:
   client-id: ${CLIENT-ID}
+
+
+weather:
+  api:
+    key: ${API_KEY_OPEN_WEATHER}
+    url: "https://api.openweathermap.org/data/2.5/weather"
