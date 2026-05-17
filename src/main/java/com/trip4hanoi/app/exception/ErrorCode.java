@@ -45,6 +45,7 @@ public enum ErrorCode {
     // CATEGORY
     CATEGORY_NOT_FOUND(1016, "Category not found", HttpStatus.NOT_FOUND),
     CATEGORY_NAME_IS_EXIST(1017, "Category name already exists", HttpStatus.BAD_REQUEST),
+    CATEGORY_IN_USE(1049, "Category is in use and cannot be deleted", HttpStatus.BAD_REQUEST),
 
     // COMMENT
     COMMENT_NOT_FOUND(1018, "Comment not found", HttpStatus.NOT_FOUND),

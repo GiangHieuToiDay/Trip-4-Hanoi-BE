@@ -70,9 +70,9 @@ public class RoleController {
     }
 
     @Operation(summary = "Update role", description = "Update role details and permissions")
-    @PutMapping
-    public ResponseEntity<APIResponse<RoleResponse>> update(@Valid @RequestBody RoleRequest request) {
-        RoleResponse role = roleService.updateRole(request.getId(), request);
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse<RoleResponse>> update(@PathVariable Long id, @Valid @RequestBody RoleRequest request) {
+        RoleResponse role = roleService.updateRole(id, request);
         return ResponseEntity.ok(APIResponse.<RoleResponse>builder()
                 .status(HttpStatus.OK.value())
                 .code(1000)

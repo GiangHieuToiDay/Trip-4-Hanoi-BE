@@ -8,6 +8,7 @@ import com.trip4hanoi.app.exception.AppException;
 import com.trip4hanoi.app.exception.ErrorCode;
 import com.trip4hanoi.app.mapper.CategoryMapper;
 import com.trip4hanoi.app.repository.CategoryRepository;
+import com.trip4hanoi.app.repository.PlaceRepository;
 import com.trip4hanoi.app.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ import java.util.List;
 @Slf4j(topic = "CATEGORY-SERVICE")
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
+    private final PlaceRepository placeRepository;
     private final CategoryMapper categoryMapper;
 
     @Override
@@ -46,7 +48,7 @@ public class CategoryServiceImpl implements CategoryService {
         log.info("Updating category ID {}: {}", id, request.getName());
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
-        
+
         category.setName(request.getName());
         return categoryMapper.toCategoryResponse(categoryRepository.save(category));
     }
@@ -58,9 +60,14 @@ public class CategoryServiceImpl implements CategoryService {
         if (!categoryRepository.existsById(id)) {
             throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
         }
+
+        // Check if category is in use by any places
+        if (!placeRepository.findByCategoryIdAndDeletedFalse(id).isEmpty()) {
+            throw new AppException(ErrorCode.CATEGORY_IN_USE);
+        }
+
         categoryRepository.deleteById(id);
     }
-
     @Override
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)

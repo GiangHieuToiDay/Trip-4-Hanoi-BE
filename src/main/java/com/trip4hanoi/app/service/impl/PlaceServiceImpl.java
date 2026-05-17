@@ -103,6 +103,10 @@ public class PlaceServiceImpl implements PlaceService {
     @Transactional
     @CacheEvict(value = "personalized_recommendations", allEntries = true)
     public PlaceResponse createPlace(PlaceRequest request, MultipartFile[] images) {
+        if (placeRepository.findByNameAndDeletedFalse(request.getName()).isPresent()) {
+            throw new AppException(ErrorCode.PLACE_IS_EXIST);
+        }
+
         Place place = placeMapper.toPlace(request);
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
@@ -155,6 +159,13 @@ public class PlaceServiceImpl implements PlaceService {
         Place place = placeRepository.findById(id)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+
+        // Check name uniqueness if changed
+        if (!place.getName().equalsIgnoreCase(request.getName())) {
+            if (placeRepository.findByNameAndDeletedFalse(request.getName()).isPresent()) {
+                throw new AppException(ErrorCode.PLACE_IS_EXIST);
+            }
+        }
 
         // Cập nhật category )
         if (request.getCategoryId() != null) {

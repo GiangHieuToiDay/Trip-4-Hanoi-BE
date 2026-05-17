@@ -57,9 +57,9 @@ public class PermissionController {
     }
 
     @Operation(summary = "Update permission", description = "Update permission details")
-    @PutMapping
-    public ResponseEntity<APIResponse<PermissionResponse>> update(@Valid @RequestBody PermissionRequest request) {
-        PermissionResponse permission = permissionService.updatePermission(request.getId(), request);
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse<PermissionResponse>> update(@PathVariable Long id, @Valid @RequestBody PermissionRequest request) {
+        PermissionResponse permission = permissionService.updatePermission(id, request);
         return ResponseEntity.ok(APIResponse.<PermissionResponse>builder()
                 .status(HttpStatus.OK.value())
                 .code(1000)

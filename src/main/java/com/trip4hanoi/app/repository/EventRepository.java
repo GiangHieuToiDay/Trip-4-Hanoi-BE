@@ -8,17 +8,23 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
     List<Event> findByPlaceId(Long placeId);
 
+    Optional<Event> findByNameAndDeletedFalse(String name);
+
     @Query("SELECT e FROM Event e " +
             "WHERE e.deleted = false " +
             "AND (:keyword IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "AND (:placeId IS NULL OR e.place.id = :placeId)")
+            "AND (:placeId IS NULL OR e.place.id = :placeId) " +
+            "ORDER BY CASE WHEN LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 0 ELSE 1 END, e.id DESC")
     Page<Event> searchEventsAdmin(@Param("keyword") String keyword, @Param("placeId") Long placeId, Pageable pageable);
 
     @Query("SELECT e FROM Event e " +
@@ -26,8 +32,9 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             "AND (:keyword IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:placeId IS NULL OR e.place.id = :placeId) " +
-            "AND (e.endTime >= :now)")
-    Page<Event> searchEventsUser(@Param("keyword") String keyword, @Param("placeId") Long placeId, @Param("now") java.time.LocalDateTime now, Pageable pageable);
+            "AND (e.endTime >= :now) " +
+            "ORDER BY CASE WHEN LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 0 ELSE 1 END, e.startTime ASC")
+    Page<Event> searchEventsUser(@Param("keyword") String keyword, @Param("placeId") Long placeId, @Param("now") LocalDateTime now, Pageable pageable);
 
     //=============================================================================================
     //DASHBOARD

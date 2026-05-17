@@ -129,6 +129,10 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventResponse createEvent(EventRequest request, MultipartFile[] images) {
+        if (eventRepository.findByNameAndDeletedFalse(request.getName()).isPresent()) {
+            throw new AppException(ErrorCode.TITLE_EXIST);
+        }
+
         Place place = placeRepository.findById(request.getPlaceId())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
 
@@ -168,6 +172,13 @@ public class EventServiceImpl implements EventService {
         //  Tìm Event cần update
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        // Check name uniqueness if changed
+        if (!event.getName().equals(request.getName())) {
+            if (eventRepository.findByNameAndDeletedFalse(request.getName()).isPresent()) {
+                throw new AppException(ErrorCode.TITLE_EXIST);
+            }
+        }
 
         //  Tìm Place mới (nếu có gửi placeId)
         if (request.getPlaceId() != null) {
