@@ -15,6 +15,7 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
     Optional<Itinerary> findByUserIdAndTitleIgnoreCase(Long userId, String title);
     boolean existsByTitleIgnoreCase(String title);
     Itinerary findByTitleIgnoreCase(String title);
+    List<Itinerary> findByIsFeaturedTrue();
     @Query("""
     SELECT i FROM Itinerary i
     LEFT JOIN FETCH i.itineraryPlaces ip

@@ -3,6 +3,7 @@ package com.trip4hanoi.app.mapper;
 import com.trip4hanoi.app.dto.req.PostRequest;
 import com.trip4hanoi.app.dto.res.PostImageResponse;
 import com.trip4hanoi.app.dto.res.PostResponse;
+import com.trip4hanoi.app.dto.res.TaggedPlaceResponse;
 import com.trip4hanoi.app.entity.Place;
 import com.trip4hanoi.app.entity.Post;
 import com.trip4hanoi.app.entity.PostImage;
@@ -20,7 +21,7 @@ public interface PostMapper {
     @Mapping(source = "user.actualUsername", target = "username")
     @Mapping(source = "user.avatar", target = "userAvatar")
     @Mapping(source = "images", target = "images")
-    @Mapping(source = "places", target = "taggedPlaceIds", qualifiedByName = "mapPlacesToIds")
+    @Mapping(source = "places", target = "taggedPlaces", qualifiedByName = "mapPlacesToResponses")
     @Mapping(source = "status", target = "status")
     @Mapping(target = "likeCount", expression = "java(post.getLikes() != null ? post.getLikes().size() : 0)")
     @Mapping(target = "commentCount", expression = "java(post.getComments() != null ? post.getComments().size() : 0)")
@@ -41,9 +42,14 @@ public interface PostMapper {
     @Mapping(target = "places", ignore = true)
     Post toPost(PostRequest request);
 
-    @Named("mapPlacesToIds")
-    default List<Long> mapPlacesToIds(List<Place> places) {
+    @Named("mapPlacesToResponses")
+    default List<TaggedPlaceResponse> mapPlacesToResponses(List<Place> places) {
         if (places == null) return null;
-        return places.stream().map(Place::getId).collect(Collectors.toList());
+        return places.stream()
+                .map(p -> TaggedPlaceResponse.builder()
+                        .id(p.getId())
+                        .name(p.getName())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

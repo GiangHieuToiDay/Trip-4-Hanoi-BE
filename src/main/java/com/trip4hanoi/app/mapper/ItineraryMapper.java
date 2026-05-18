@@ -22,6 +22,8 @@ public abstract class ItineraryMapper {
     @Autowired
     protected ItineraryPlaceMapper itineraryPlaceMapper;
 
+    @Mapping(source = "user.id", target = "userId")
+    @Mapping(source = "user.username", target = "userName")
     @Mapping(source = "itineraryPlaces", target = "itineraryDays", qualifiedByName = "mapItineraryPlacesToDays")
     public abstract ItineraryResponse toItineraryResponse(Itinerary itinerary);
 

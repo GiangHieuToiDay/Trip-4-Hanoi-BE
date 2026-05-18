@@ -3,6 +3,7 @@ package com.trip4hanoi.app.service.impl;
 import com.trip4hanoi.app.dto.req.*;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
 import com.trip4hanoi.app.entity.*;
 import com.trip4hanoi.app.exception.AppException;
@@ -14,6 +15,12 @@ import com.trip4hanoi.app.service.ItineraryService;
 import com.trip4hanoi.app.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +57,11 @@ public class ItineraryServiceImpl implements ItineraryService {
         Itinerary itinerary = itineraryMapper.toItinerary(request);
         itinerary.setTitle(trimmedTitle);
         itinerary.setUser(user);
+
+        // Nếu là ADMIN/STAFF tạo thì đánh dấu là Featured (Lịch trình mẫu)
+        if (user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN") || r.getName().equals("STAFF"))) {
+            itinerary.setIsFeatured(true);
+        }
 
         itinerary.setBudget(request.getBudget());
         itinerary.setDays(request.getDays());
@@ -444,7 +456,34 @@ public class ItineraryServiceImpl implements ItineraryService {
 
     @Override
     public void deleteItinerary(Long itineraryId) {
+        Itinerary itinerary = itineraryRepository.findById(itineraryId)
+                .orElseThrow(() -> new AppException(ErrorCode.PLAN_NOT_FOUND));
+        
+        Long currentUserId = getCurrentUserId();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(a -> a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("MODERATE_CONTENT"));
+
+        if (isAdmin) {
+            // Admin chỉ được xóa lịch trình do hệ thống tạo (featured)
+            if (!Boolean.TRUE.equals(itinerary.getIsFeatured())) {
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+            }
+        } else {
+            // User thường chỉ được xóa lịch trình của chính mình
+            if (!itinerary.getUser().getId().equals(currentUserId)) {
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+            }
+        }
+        
         itineraryRepository.deleteById(itineraryId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ItineraryResponse> getFeaturedItineraries() {
+        return itineraryRepository.findByIsFeaturedTrue().stream()
+                .map(itineraryMapper::toItineraryResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -694,6 +733,44 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         Itinerary updated = itineraryRepository.findByIdWithPlaces(clone.getId());
         return itineraryMapper.toItineraryResponse(updated);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        
+        Page<Itinerary> itineraryPage;
+        if (keyword != null && !keyword.isBlank()) {
+            itineraryPage = itineraryRepository.findAll(pageable);
+        } else {
+            itineraryPage = itineraryRepository.findAll(pageable);
+        }
+
+        List<ItineraryResponse> content = itineraryPage.getContent().stream()
+                .map(itineraryMapper::toItineraryResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.<ItineraryResponse>builder()
+                .pageNumber(page)
+                .pageSize(size)
+                .totalElements(itineraryPage.getTotalElements())
+                .totalPages(itineraryPage.getTotalPages())
+                .data(content)
+                .build();
+    }
+
+    private Long getCurrentUserId() {
+        var context = SecurityContextHolder.getContext();
+        var authentication = context.getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            Object idClaim = jwt.getClaims().get("id");
+            if (idClaim instanceof Number n) {
+                return n.longValue();
+            }
+        }
+        return 0L;
     }
 
 

@@ -6,6 +6,7 @@ import com.trip4hanoi.app.dto.req.ItineraryUpdateFullRequest;
 import com.trip4hanoi.app.dto.req.SaveAIItineraryRequest;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import java.util.List;
 
 public interface ItineraryService {
@@ -30,5 +31,9 @@ public interface ItineraryService {
     ItineraryResponse reorderPlace(Long itineraryPlaceId, int newDay, int newOrderIndex);
 
     ItineraryResponse cloneItinerary(Long itineraryId, Long userId);
+
+    PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword);
+
+    List<ItineraryResponse> getFeaturedItineraries();
 
 }

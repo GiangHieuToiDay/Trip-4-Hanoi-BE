@@ -30,5 +30,5 @@ public class PostResponse {
     private Integer commentCount;
     private Boolean isLiked;
     private List<PostImageResponse> images;
-    private List<Long> taggedPlaceIds;
+    private List<TaggedPlaceResponse> taggedPlaces;
 }

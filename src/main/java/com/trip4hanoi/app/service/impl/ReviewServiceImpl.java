@@ -1,6 +1,7 @@
 package com.trip4hanoi.app.service.impl;
 
 import com.trip4hanoi.app.dto.req.ReviewRequest;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.dto.res.ReviewResponse;
 import com.trip4hanoi.app.entity.Place;
 import com.trip4hanoi.app.entity.Review;
@@ -13,6 +14,10 @@ import com.trip4hanoi.app.repository.ReviewRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -67,6 +72,27 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public void deleteReview(Long reviewId) {
         reviewRepository.deleteById(reviewId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ReviewResponse> getAllReviews(int page, int size, Integer rating, String keyword) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        
+        Page<Review> reviewPage = reviewRepository.findAll(pageable);
+
+        List<ReviewResponse> content = reviewPage.getContent().stream()
+                .map(reviewMapper::toReviewResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.<ReviewResponse>builder()
+                .pageNumber(page)
+                .pageSize(size)
+                .totalElements(reviewPage.getTotalElements())
+                .totalPages(reviewPage.getTotalPages())
+                .data(content)
+                .build();
     }
 
     private Long getCurrentUserId() {

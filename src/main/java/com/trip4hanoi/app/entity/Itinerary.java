@@ -29,6 +29,11 @@ public class Itinerary {
 
     private Integer numberOfPeople;
 
+    @Column(name = "is_featured")
+    @Builder.Default
+    private Boolean isFeatured = false;
+
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -2,6 +2,7 @@ package com.trip4hanoi.app.controller;
 
 import com.trip4hanoi.app.dto.req.ReviewRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.dto.res.ReviewResponse;
 import com.trip4hanoi.app.service.ReviewService;
 import lombok.RequiredArgsConstructor;
@@ -68,8 +69,28 @@ public class ReviewController {
         );
     }
 
+    @GetMapping("/admin")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT')")
+    public ResponseEntity<APIResponse<PageResponse<ReviewResponse>>> getAllReviews(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) String keyword
+    ) {
+        PageResponse<ReviewResponse> reviews = reviewService.getAllReviews(page, size, rating, keyword);
+
+        return ResponseEntity.ok(
+                APIResponse.<PageResponse<ReviewResponse>>builder()
+                        .status(HttpStatus.OK.value())
+                        .code(1000)
+                        .message("Successfully retrieved all reviews")
+                        .data(reviews)
+                        .build()
+        );
+    }
+
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN') or isAuthenticated()")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> deleteReview(@PathVariable Long id) {
         reviewService.deleteReview(id);
 

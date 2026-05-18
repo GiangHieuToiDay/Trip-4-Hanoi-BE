@@ -6,6 +6,7 @@ import com.trip4hanoi.app.dto.req.ItineraryUpdateFullRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.service.ItineraryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -24,6 +25,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ItineraryController {
     private final ItineraryService itineraryService;
+
+    @Operation(summary = "Get all itineraries for admin", description = "API get all itineraries with pagination for admin/staff")
+    @GetMapping("/admin")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT')")
+    public ResponseEntity<APIResponse<PageResponse<ItineraryResponse>>> getAllItinerariesAdmin(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword) {
+        
+        PageResponse<ItineraryResponse> result = itineraryService.getAllItinerariesAdmin(page, size, keyword);
+
+        APIResponse<PageResponse<ItineraryResponse>> response = APIResponse.<PageResponse<ItineraryResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved all itineraries")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/featured")
+    public ResponseEntity<APIResponse<List<ItineraryResponse>>> getFeaturedItineraries() {
+        List<ItineraryResponse> result = itineraryService.getFeaturedItineraries();
+
+        APIResponse<List<ItineraryResponse>> response = APIResponse.<List<ItineraryResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved featured itineraries")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(summary = "Create itinerary", description = "API create itinerary for user")
     @PostMapping("/create")
@@ -146,7 +181,7 @@ public class ItineraryController {
     }
 
     @DeleteMapping("/remove-itinerary/{id}")
-    @PreAuthorize("hasAuthority('ADMIN') or isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') or isAuthenticated()")
     public ResponseEntity<APIResponse<Void>> removeItinerary(
             @PathVariable Long id) {
 

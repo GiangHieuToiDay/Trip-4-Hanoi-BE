@@ -11,10 +11,13 @@ import java.util.List;
 @Builder
 public class ItineraryResponse {
     private Long id;
+    private Long userId;
+    private String userName;
     private String title;
     private Integer budget;
     private Integer days;
     private Integer numberOfPeople;
+    private Boolean isFeatured;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime createdAt;
