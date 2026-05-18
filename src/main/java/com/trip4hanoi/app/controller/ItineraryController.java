@@ -32,9 +32,11 @@ public class ItineraryController {
     public ResponseEntity<APIResponse<PageResponse<ItineraryResponse>>> getAllItinerariesAdmin(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean isSample,
+            @RequestParam(required = false) String status) {
         
-        PageResponse<ItineraryResponse> result = itineraryService.getAllItinerariesAdmin(page, size, keyword);
+        PageResponse<ItineraryResponse> result = itineraryService.getAllItinerariesAdmin(page, size, keyword, isSample, status);
 
         APIResponse<PageResponse<ItineraryResponse>> response = APIResponse.<PageResponse<ItineraryResponse>>builder()
                 .status(HttpStatus.OK.value())
@@ -54,6 +56,20 @@ public class ItineraryController {
                 .status(HttpStatus.OK.value())
                 .code(1000)
                 .message("Successfully retrieved featured itineraries")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/samples")
+    public ResponseEntity<APIResponse<List<ItineraryResponse>>> getSampleItineraries() {
+        List<ItineraryResponse> result = itineraryService.getSampleItineraries();
+
+        APIResponse<List<ItineraryResponse>> response = APIResponse.<List<ItineraryResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved sample itineraries")
                 .data(result)
                 .build();
 

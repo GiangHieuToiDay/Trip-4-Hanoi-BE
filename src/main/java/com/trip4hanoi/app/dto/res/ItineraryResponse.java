@@ -18,6 +18,10 @@ public class ItineraryResponse {
     private Integer days;
     private Integer numberOfPeople;
     private Boolean isFeatured;
+    private Boolean isSample;
+    private String description;
+    private String coverImage;
+    private String status;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime createdAt;

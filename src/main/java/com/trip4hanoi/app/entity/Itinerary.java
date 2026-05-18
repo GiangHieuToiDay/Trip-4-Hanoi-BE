@@ -33,6 +33,19 @@ public class Itinerary {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Column(name = "is_sample")
+    @Builder.Default
+    private Boolean isSample = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "cover_image")
+    private String coverImage;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ItineraryStatus status = ItineraryStatus.PUBLISHED;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

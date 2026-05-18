@@ -37,6 +37,10 @@ public class ItineraryRequest {
 
     private List<@NotBlank(message = "Category name invalid") String> categoryNames;
 
-
     private LocalDate startDate;
+
+    private String description;
+    private String coverImage;
+    private Boolean isSample;
+    private String status;
 }

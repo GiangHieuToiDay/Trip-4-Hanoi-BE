@@ -32,8 +32,9 @@ public interface ItineraryService {
 
     ItineraryResponse cloneItinerary(Long itineraryId, Long userId);
 
-    PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword);
+    PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword, Boolean isSample, String status);
 
     List<ItineraryResponse> getFeaturedItineraries();
 
+    List<ItineraryResponse> getSampleItineraries();
 }

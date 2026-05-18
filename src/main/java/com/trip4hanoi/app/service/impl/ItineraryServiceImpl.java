@@ -59,8 +59,35 @@ public class ItineraryServiceImpl implements ItineraryService {
         itinerary.setUser(user);
 
         // Nếu là ADMIN/STAFF tạo thì đánh dấu là Featured (Lịch trình mẫu)
-        if (user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN") || r.getName().equals("STAFF"))) {
-            itinerary.setIsFeatured(true);
+        boolean isAdminOrStaff = user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN") || r.getName().equals("STAFF"));
+        if (isAdminOrStaff) {
+            if (Boolean.TRUE.equals(request.getIsSample())) {
+                itinerary.setIsSample(true);
+                itinerary.setIsFeatured(true); // Mặc định sample cũng là featured để dễ promote
+            }
+        } else {
+            // User thường không được tự set isSample
+            itinerary.setIsSample(false);
+        }
+
+        itinerary.setDescription(request.getDescription());
+        itinerary.setCoverImage(request.getCoverImage());
+
+        // Handle Status
+        if (isAdminOrStaff && Boolean.TRUE.equals(itinerary.getIsSample())) {
+            // Admin tạo sample: Nếu có gửi status thì dùng, không thì mặc định DRAFT
+            if (request.getStatus() != null) {
+                try {
+                    itinerary.setStatus(ItineraryStatus.valueOf(request.getStatus().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    itinerary.setStatus(ItineraryStatus.DRAFT);
+                }
+            } else {
+                itinerary.setStatus(ItineraryStatus.DRAFT);
+            }
+        } else {
+            // User tạo hoặc Admin tạo itinerary thường: Mặc định PUBLISHED
+            itinerary.setStatus(ItineraryStatus.PUBLISHED);
         }
 
         itinerary.setBudget(request.getBudget());
@@ -482,6 +509,7 @@ public class ItineraryServiceImpl implements ItineraryService {
     @Transactional(readOnly = true)
     public List<ItineraryResponse> getFeaturedItineraries() {
         return itineraryRepository.findByIsFeaturedTrue().stream()
+                .filter(i -> i.getStatus() == ItineraryStatus.PUBLISHED)
                 .map(itineraryMapper::toItineraryResponse)
                 .collect(Collectors.toList());
     }
@@ -517,6 +545,31 @@ public class ItineraryServiceImpl implements ItineraryService {
         }
         if (request.getNumberOfPeople() != null) {
             itinerary.setNumberOfPeople(request.getNumberOfPeople());
+        }
+        if (request.getDescription() != null) {
+            itinerary.setDescription(request.getDescription());
+        }
+        if (request.getCoverImage() != null) {
+            itinerary.setCoverImage(request.getCoverImage());
+        }
+
+        // Cập nhật Status & isSample (Chỉ Admin/Staff mới có quyền)
+        Long currentUserId = getCurrentUserId();
+        User user = userRepository.findById(currentUserId).orElse(null);
+        boolean isAdminOrStaff = user != null && user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN") || r.getName().equals("STAFF"));
+
+        if (isAdminOrStaff) {
+            if (request.getIsSample() != null) {
+                itinerary.setIsSample(request.getIsSample());
+                if (Boolean.TRUE.equals(request.getIsSample())) {
+                    itinerary.setIsFeatured(true);
+                }
+            }
+            if (request.getStatus() != null) {
+                try {
+                    itinerary.setStatus(ItineraryStatus.valueOf(request.getStatus().toUpperCase()));
+                } catch (IllegalArgumentException ignored) {}
+            }
         }
 
         return itineraryMapper.toItineraryResponse(itineraryRepository.save(itinerary));
@@ -710,10 +763,15 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         Itinerary clone = Itinerary.builder()
                 .title(old.getTitle() + " (Copy)")
+                .description(old.getDescription())
+                .coverImage(old.getCoverImage())
                 .budget(old.getBudget())
                 .days(old.getDays())
                 .numberOfPeople(old.getNumberOfPeople())
                 .user(user)
+                .isSample(false) // Clone của user không bao giờ là sample
+                .isFeatured(false)
+                .status(ItineraryStatus.PUBLISHED)
                 .build();
 
         itineraryRepository.save(clone);
@@ -737,16 +795,23 @@ public class ItineraryServiceImpl implements ItineraryService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword) {
+    public PageResponse<ItineraryResponse> getAllItinerariesAdmin(int page, int size, String keyword, Boolean isSample, String status) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page - 1, size, sort);
         
-        Page<Itinerary> itineraryPage;
-        if (keyword != null && !keyword.isBlank()) {
-            itineraryPage = itineraryRepository.findAll(pageable);
-        } else {
-            itineraryPage = itineraryRepository.findAll(pageable);
+        ItineraryStatus statusEnum = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                statusEnum = ItineraryStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
         }
+
+        // Sử dụng hàm search tập trung để xử lý tất cả filter cùng lúc (keyword, isSample, status)
+        Page<Itinerary> itineraryPage = itineraryRepository.searchItinerariesAdmin(
+                (keyword != null && !keyword.isBlank()) ? keyword : null, 
+                isSample, 
+                statusEnum, 
+                pageable);
 
         List<ItineraryResponse> content = itineraryPage.getContent().stream()
                 .map(itineraryMapper::toItineraryResponse)
@@ -759,6 +824,14 @@ public class ItineraryServiceImpl implements ItineraryService {
                 .totalPages(itineraryPage.getTotalPages())
                 .data(content)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ItineraryResponse> getSampleItineraries() {
+        return itineraryRepository.findByIsSampleTrueAndStatus(ItineraryStatus.PUBLISHED).stream()
+                .map(itineraryMapper::toItineraryResponse)
+                .collect(Collectors.toList());
     }
 
     private Long getCurrentUserId() {
