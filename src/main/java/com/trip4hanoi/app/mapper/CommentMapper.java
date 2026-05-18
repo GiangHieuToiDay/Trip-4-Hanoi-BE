@@ -11,7 +11,8 @@ public interface CommentMapper {
 
     @Mapping(source = "post.id", target = "postId")
     @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.username", target = "username")
+    @Mapping(source = "user.actualUsername", target = "username")
+    @Mapping(source = "user.avatar", target = "avatar")
     CommentResponse toCommentResponse(Comment comment);
 
     @Mapping(target = "id", ignore = true)

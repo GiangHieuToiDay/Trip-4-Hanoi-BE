@@ -1,8 +1,10 @@
 package com.trip4hanoi.app.controller;
 
 
+import com.trip4hanoi.app.common.PostStatus;
 import com.trip4hanoi.app.dto.req.PostRequest;
 import com.trip4hanoi.app.dto.res.APIResponse;
+import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.dto.res.PostResponse;
 import com.trip4hanoi.app.service.PostLikeService;
 import com.trip4hanoi.app.service.PostService;
@@ -10,7 +12,6 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,18 +45,18 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<APIResponse<Page<PostResponse>>> getAllPosts(
-            @RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<APIResponse<PageResponse<PostResponse>>> getAllPosts(
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Page<PostResponse> posts = postService.findAllPost(page, size);
+        var result = postService.findAllPost(page - 1, size);
 
         return ResponseEntity.ok(
-                APIResponse.<Page<PostResponse>>builder()
+                APIResponse.<PageResponse<PostResponse>>builder()
                         .status(HttpStatus.OK.value())
                         .code(1000)
                         .message("Successfully retrieved posts")
-                        .data(posts)
+                        .data(PageResponse.from(result, result.getContent()))
                         .build()
         );
     }
@@ -78,19 +79,19 @@ public class PostController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<APIResponse<Page<PostResponse>>> searchPosts(
+    public ResponseEntity<APIResponse<PageResponse<PostResponse>>> searchPosts(
             @RequestParam String title,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Page<PostResponse> posts = postService.findAllPostByTitle(page, size, title);
+        var result = postService.findAllPostByTitle(page - 1, size, title);
 
         return ResponseEntity.ok(
-                APIResponse.<Page<PostResponse>>builder()
+                APIResponse.<PageResponse<PostResponse>>builder()
                         .status(HttpStatus.OK.value())
                         .code(1000)
                         .message("Search posts successfully")
-                        .data(posts)
+                        .data(PageResponse.from(result, result.getContent()))
                         .build()
         );
     }
@@ -175,6 +176,45 @@ public class PostController {
                         .code(1000)
                         .message("User posts retrieved successfully")
                         .data(posts)
+                        .build()
+        );
+    }
+
+    // =============================================================================================
+    // ADMIN ENDPOINTS
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT')")
+    public ResponseEntity<APIResponse<PageResponse<PostResponse>>> getAllPostsAdmin(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) PostStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        var result = postService.findAllPostAdmin(keyword, status, page - 1, size);
+
+        return ResponseEntity.ok(
+                APIResponse.<PageResponse<PostResponse>>builder()
+                        .status(HttpStatus.OK.value())
+                        .code(1000)
+                        .message("Successfully retrieved posts for admin")
+                        .data(PageResponse.from(result, result.getContent()))
+                        .build());
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('MODERATE_CONTENT')")
+    public ResponseEntity<APIResponse<Void>> updatePostStatus(
+            @PathVariable Long id,
+            @RequestParam PostStatus status) {
+
+        postService.updatePostStatus(id, status);
+
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .status(HttpStatus.OK.value())
+                        .code(1000)
+                        .message("Post status updated successfully to " + status)
                         .build()
         );
     }

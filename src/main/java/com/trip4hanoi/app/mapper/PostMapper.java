@@ -17,9 +17,11 @@ import java.util.stream.Collectors;
 public interface PostMapper {
 
     @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.username", target = "userName")
+    @Mapping(source = "user.actualUsername", target = "username")
+    @Mapping(source = "user.avatar", target = "userAvatar")
     @Mapping(source = "images", target = "images")
     @Mapping(source = "places", target = "taggedPlaceIds", qualifiedByName = "mapPlacesToIds")
+    @Mapping(source = "status", target = "status")
     @Mapping(target = "likeCount", expression = "java(post.getLikes() != null ? post.getLikes().size() : 0)")
     @Mapping(target = "commentCount", expression = "java(post.getComments() != null ? post.getComments().size() : 0)")
     @Mapping(target = "isLiked", ignore = true)

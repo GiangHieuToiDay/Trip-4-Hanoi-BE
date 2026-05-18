@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.entity;
 
+import com.trip4hanoi.app.common.PostStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -28,6 +29,11 @@ public class Post {
 
     @Column(columnDefinition = "TEXT")
     private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(name = "status")
+    private PostStatus status = PostStatus.PENDING;
 
     @Builder.Default
     @Column(name = "view_count")

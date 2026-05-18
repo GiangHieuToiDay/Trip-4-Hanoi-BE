@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.repository;
 
+import com.trip4hanoi.app.common.PostStatus;
 import com.trip4hanoi.app.entity.Post;
 import com.trip4hanoi.app.entity.User;
 import org.springframework.data.domain.Page;
@@ -12,10 +13,13 @@ import java.util.Optional;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findAll(Pageable pageable);
+    Page<Post> findByStatus(PostStatus status, Pageable pageable);
     Optional<Post> findById(long id);
     Page<Post> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    Page<Post> findByTitleContainingIgnoreCaseAndStatus(String title, PostStatus status, Pageable pageable);
     void deleteById(long id);
     List<Post> findPostByUser(User user);
+    Page<Post> findByUserAndStatus(User user, PostStatus status, Pageable pageable);
 
 
     //=============================================================================================

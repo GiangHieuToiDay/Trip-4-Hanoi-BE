@@ -1,6 +1,7 @@
 package com.trip4hanoi.app.service;
 
 
+import com.trip4hanoi.app.common.PostStatus;
 import com.trip4hanoi.app.dto.req.PostRequest;
 import com.trip4hanoi.app.dto.res.PostResponse;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,8 @@ public interface PostService {
 
     Page<PostResponse> findAllPost(int page, int size);
 
+    Page<PostResponse> findAllPostAdmin(String keyword, PostStatus status, int page, int size);
+
     PostResponse findPostById(long id);
 
     Page<PostResponse> findAllPostByTitle(int page, int size, String title);
@@ -24,7 +27,7 @@ public interface PostService {
 
     void deletePost(long id);
 
-//    Page<PostResponse> findAllPostByCategory(String category, int page, int size);
+    void updatePostStatus(Long id, PostStatus status);
 
     List<PostResponse> findTop5PostsByUpvotes();
 

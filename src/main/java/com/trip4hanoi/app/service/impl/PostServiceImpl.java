@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.service.impl;
 
+import com.trip4hanoi.app.common.PostStatus;
 import com.trip4hanoi.app.dto.req.PostRequest;
 import com.trip4hanoi.app.dto.res.PostResponse;
 import com.trip4hanoi.app.entity.Place;
@@ -55,7 +56,32 @@ public class PostServiceImpl implements PostService {
                 Sort.by("createdAt").descending()
         );
 
-        Page<Post> postPage = postRepository.findAll(pageable);
+        // PUBLIC VIEW: Only show APPROVED posts
+        Page<Post> postPage = postRepository.findByStatus(PostStatus.APPROVED, pageable);
+        return postPage.map(postMapper::toPostResponse);
+    }
+
+    @Override
+    public Page<PostResponse> findAllPostAdmin(String keyword, PostStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("id").descending()
+        );
+
+        Page<Post> postPage;
+        if (org.springframework.util.StringUtils.hasText(keyword)) {
+            if (status != null) {
+                postPage = postRepository.findByTitleContainingIgnoreCaseAndStatus(keyword, status, pageable);
+            } else {
+                postPage = postRepository.findByTitleContainingIgnoreCase(keyword, pageable);
+            }
+        } else if (status != null) {
+            postPage = postRepository.findByStatus(status, pageable);
+        } else {
+            postPage = postRepository.findAll(pageable);
+        }
+
         return postPage.map(postMapper::toPostResponse);
     }
 
@@ -73,7 +99,8 @@ public class PostServiceImpl implements PostService {
                 size,
                 Sort.by("createdAt").descending()
         );
-        Page<Post> pagePost = postRepository.findByTitleContainingIgnoreCase(title, pageable);
+        // PUBLIC SEARCH: Only show APPROVED posts
+        Page<Post> pagePost = postRepository.findByTitleContainingIgnoreCaseAndStatus(title, PostStatus.APPROVED, pageable);
         return pagePost.map(postMapper::toPostResponse);
     }
 
@@ -93,6 +120,7 @@ public class PostServiceImpl implements PostService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .user(user)
+                .status(PostStatus.PENDING) // Explicitly set as PENDING
                 .images(new ArrayList<>())
                 .build();
 
@@ -197,6 +225,14 @@ public class PostServiceImpl implements PostService {
             }
         }
         postRepository.deleteById(id);
+    }
+
+    @Override
+    public void updatePostStatus(Long id, PostStatus status) {
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+        post.setStatus(status);
+        postRepository.save(post);
     }
 
     @Override
