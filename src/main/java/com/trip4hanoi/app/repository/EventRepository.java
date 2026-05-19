@@ -41,8 +41,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     // Thống kê sự kiện hot dựa trên lượng tương tác
     @Query(value = "SELECT e.id, e.name, " +
-            "((SELECT COUNT(*) FROM user_event_follows WHERE event_id = e.id) + " +
-            "(SELECT COUNT(*) FROM event_subscriptions WHERE event_id = e.id)) as hotness, " +
+            "((SELECT COUNT(*) FROM user_event_follow WHERE event_id = e.id) + " +
+            "(SELECT COUNT(*) FROM event_subscription WHERE event_id = e.id)) as hotness, " +
             "e.start_time, e.end_time " +
             "FROM events e WHERE e.deleted = false ORDER BY hotness DESC LIMIT 10", nativeQuery = true)
     List<Object[]> findTopHotEvents();

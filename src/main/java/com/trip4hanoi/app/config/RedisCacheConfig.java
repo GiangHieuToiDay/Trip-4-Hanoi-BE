@@ -42,6 +42,8 @@ public class RedisCacheConfig {
                 .cacheDefaults(config)
                 .withCacheConfiguration("personalized_recommendations",
                     config.entryTtl(Duration.ofMinutes(30)))
+                .withCacheConfiguration("dashboard_v2",
+                    config.entryTtl(Duration.ofHours(24))) // Cache dashboard 24h để tiết kiệm hạn mức Gemini API
                 .build();
     }
 }

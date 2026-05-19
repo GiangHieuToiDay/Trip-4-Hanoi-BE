@@ -10,5 +10,6 @@ public class NotificationRequest {
     private Long userId;
     private Long eventId;
     private String message;
+    private String targetUrl;
     private String status;
 }

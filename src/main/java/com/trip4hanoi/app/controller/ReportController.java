@@ -44,7 +44,7 @@ public class ReportController {
 
     // Admin lấy tất cả báo cáo
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<APIResponse<List<ReportResponse>>> getAllReports() {
         List<ReportResponse> reports = reportService.getAllReports();
         return ResponseEntity.ok(APIResponse.<List<ReportResponse>>builder()
@@ -56,7 +56,7 @@ public class ReportController {
 
     // Admin lấy các báo cáo đang chờ xử lý
     @GetMapping("/pending")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<APIResponse<List<ReportResponse>>> getPendingReports() {
         List<ReportResponse> reports = reportService.getPendingReports();
         return ResponseEntity.ok(APIResponse.<List<ReportResponse>>builder()
@@ -68,7 +68,7 @@ public class ReportController {
 
     // Admin xử lý báo cáo (VD: đổi từ PENDING -> RESOLVED / DISMISSED)
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<APIResponse<ReportResponse>> updateReportStatus(
             @PathVariable Long id,
             @RequestParam String status) {

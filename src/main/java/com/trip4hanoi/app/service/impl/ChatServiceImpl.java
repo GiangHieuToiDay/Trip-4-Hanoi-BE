@@ -21,6 +21,8 @@ import com.trip4hanoi.app.repository.ChatRoomRepository;
 import com.trip4hanoi.app.repository.InternalNoteRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.ChatService;
+import com.trip4hanoi.app.service.NotificationService;
+import com.trip4hanoi.app.dto.req.NotificationRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -41,6 +43,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final InternalNoteRepository  internalNoteRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private final ChatRoomMapper chatRoomMapper;
     private final ChatMessageMapper chatMessageMapper;
@@ -140,6 +143,22 @@ public class ChatServiceImpl implements ChatService {
         roomUpdate.setLastMessage(response);
         roomUpdate.setUnreadCount(room.getUnreadCount() != null ? room.getUnreadCount() : 0);
         messagingTemplate.convertAndSend("/topic/chat/rooms", roomUpdate);
+
+        // [LOGIC THÔNG BÁO CHO USER]
+        // Nếu là Staff nhắn, tạo thông báo cho User sở hữu phòng chat
+        if (messageType == ChatMessageType.STAFF) {
+            try {
+                notificationService.createNotification(NotificationRequest.builder()
+                        .userId(room.getUser().getId())
+                        .message("Nhân viên " + sender.getUsername() + " đã trả lời tin nhắn của bạn.")
+                        .targetUrl("/#chat")
+                        .status("UNREAD")
+                        .build());
+                log.info("Created notification for user {} regarding staff message", room.getUser().getId());
+            } catch (Exception e) {
+                log.error("Failed to create chat notification: {}", e.getMessage());
+            }
+        }
 
         // neu la phong moi (chua co tin nhan nao truoc do hoac moi tao), gui Auto-reply va thong bao cho staff
         // Kiem tra tin nhan dau tien cua room la USER gui
