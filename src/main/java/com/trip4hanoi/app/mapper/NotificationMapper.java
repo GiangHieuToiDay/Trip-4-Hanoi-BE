@@ -12,6 +12,7 @@ public interface NotificationMapper {
 
     @Mapping(source = "user.id", target = "userId")
     @Mapping(source = "event.id", target = "eventId")
+    @Mapping(source = "targetUrl", target = "targetUrl")
     NotificationResponse toNotificationResponse(Notification notification);
 
     @Mapping(target = "user", ignore = true)

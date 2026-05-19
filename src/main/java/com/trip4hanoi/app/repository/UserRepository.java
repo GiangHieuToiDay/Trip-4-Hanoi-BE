@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.repository;
 
+import com.trip4hanoi.app.entity.Role;
 import com.trip4hanoi.app.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,4 +38,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "(SELECT 1 FROM Itinerary i WHERE i.user.id = u.id) OR " +
             "EXISTS (SELECT 1 FROM Post p WHERE p.user.id = u.id)")
     long countConvertedUsers();
+
+    List<User> findByRolesContaining(Role role);
 }

@@ -15,6 +15,7 @@ import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.CloudinaryService;
 import com.trip4hanoi.app.service.PostService;
+import com.trip4hanoi.app.service.SmartNotificationEngine;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -46,6 +47,7 @@ public class PostServiceImpl implements PostService {
     UserRepository userRepository;
     PlaceRepository placeRepository;
     CloudinaryService cloudinaryService;
+    SmartNotificationEngine smartNotificationEngine;
 
 
     @Override
@@ -150,7 +152,13 @@ public class PostServiceImpl implements PostService {
             post.setPlaces(new ArrayList<>(places));
         }
 
-        return postMapper.toPostResponse(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        
+        // --- SMART NOTIFICATION TRIGGER ---
+        // Thông báo cho Admin biết có bài viết mới cần duyệt
+        smartNotificationEngine.notifyAdminNewPost(savedPost);
+
+        return postMapper.toPostResponse(savedPost);
     }
 
     @Override
@@ -233,6 +241,9 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
         post.setStatus(status);
         postRepository.save(post);
+        
+        // Gửi thông báo cho tác giả bài viết
+        smartNotificationEngine.notifyUserPostStatus(post);
     }
 
     @Override

@@ -21,6 +21,7 @@ public class UserLocationServiceImpl implements UserLocationService {
     private final UserLocationHistoryRepository locationHistoryRepository;
     private final UserRepository userRepository;
     private final com.trip4hanoi.app.service.GeocodingService geocodingService;
+    private final com.trip4hanoi.app.service.SmartNotificationEngine smartNotificationEngine;
 
     @Override
     @Transactional
@@ -52,6 +53,9 @@ public class UserLocationServiceImpl implements UserLocationService {
                     .build();
             locationHistoryRepository.save(history);
             log.debug("Saved location history for user {}: {}, {} ({}) in {}", userId, lat, lng, actionType, finalDistrictToSave);
+
+            // --- SMART LOCATION TRIGGER ---
+            smartNotificationEngine.processLocationTrigger(user, lat, lng);
         });
     }
 

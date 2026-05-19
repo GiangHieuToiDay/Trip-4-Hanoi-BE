@@ -29,6 +29,7 @@ import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.AuthenticationService;
 import com.trip4hanoi.app.service.JwtService;
 import com.trip4hanoi.app.service.MailService;
+import com.trip4hanoi.app.service.SmartNotificationEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +69,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final MailService mailService;
+    private final SmartNotificationEngine smartNotificationEngine;
 
 
     /**
@@ -125,6 +127,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .id(user.getId())
                 .username(user.getActualUsername())
                 .email(user.getEmail())
+                .avatar(user.getAvatar())
                 .roles(roleResponses)
                 .provider(user.getProvider())
                 .status(user.getStatus())
@@ -412,7 +415,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         user.setStatus(UserStatus.ACTIVE);
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+
+        // --- SMART NOTIFICATION TRIGGER ---
+        smartNotificationEngine.sendWelcomeNotification(user);
     }
 
 }

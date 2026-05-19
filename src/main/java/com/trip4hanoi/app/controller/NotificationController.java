@@ -104,6 +104,17 @@ public class NotificationController {
                 .build());
     }
 
+    @PatchMapping("/user/{userId}/read-all")
+    public ResponseEntity<APIResponse<Void>> markAllAsRead(@PathVariable Long userId) {
+        log.info("REST request to mark all notifications as read for user: {}", userId);
+        notificationService.markAllAsReadByUserId(userId);
+        return ResponseEntity.ok(APIResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("All notifications marked as read")
+                .build());
+    }
+
 
     /**
      * Lưu hoặc update FCM token cho user

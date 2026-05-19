@@ -64,7 +64,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public List<NotificationResponse> getNotificationsByUserId(Long userId) {
-        return notificationRepository.findByUserId(userId).stream()
+        return notificationRepository.findByUserIdOrderByIdDesc(userId).stream()
                 .map(notificationMapper::toNotificationResponse)
                 .collect(Collectors.toList());
     }
@@ -112,6 +112,19 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setStatus("READ");
         notification = notificationRepository.save(notification);
         return notificationMapper.toNotificationResponse(notification);
+    }
+
+    @Override
+    @Transactional
+    public void markAllAsReadByUserId(Long userId) {
+        List<Notification> unreadNotifications = notificationRepository.findByUserIdOrderByIdDesc(userId).stream()
+                .filter(n -> "UNREAD".equals(n.getStatus()))
+                .toList();
+        
+        for (Notification notification : unreadNotifications) {
+            notification.setStatus("READ");
+        }
+        notificationRepository.saveAll(unreadNotifications);
     }
 
     @Override

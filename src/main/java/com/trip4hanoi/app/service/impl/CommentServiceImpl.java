@@ -4,15 +4,18 @@ import com.trip4hanoi.app.dto.req.CommentRequest;
 import com.trip4hanoi.app.dto.res.CommentResponse;
 import com.trip4hanoi.app.dto.res.PageResponse;
 import com.trip4hanoi.app.entity.Comment;
+import com.trip4hanoi.app.entity.Notification;
 import com.trip4hanoi.app.entity.Post;
 import com.trip4hanoi.app.entity.User;
 import com.trip4hanoi.app.exception.AppException;
 import com.trip4hanoi.app.exception.ErrorCode;
 import com.trip4hanoi.app.mapper.CommentMapper;
 import com.trip4hanoi.app.repository.CommentRepository;
+import com.trip4hanoi.app.repository.NotificationRepository;
 import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.CommentService;
+import com.trip4hanoi.app.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,6 +39,9 @@ public class CommentServiceImpl implements CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
+
+    private final NotificationRepository notificationRepository;
+    private final FcmService fcmService;
 
     private Long getCurrentUserId() {
         var context = SecurityContextHolder.getContext();
@@ -61,8 +67,60 @@ public class CommentServiceImpl implements CommentService {
                 .user(user)
                 .post(post)
                 .build();
+        
+        Comment savedComment = commentRepository.save(comment);
+        
+        // --- LOGIC THÔNG BÁO TƯƠNG TÁC XÃ HỘI ---
+        sendSocialNotifications(user, post, request.getContent());
 
-        return commentMapper.toCommentResponse(commentRepository.save(comment));
+        return commentMapper.toCommentResponse(savedComment);
+    }
+
+    private void sendSocialNotifications(User commenter, Post post, String content) {
+        String targetUrl = "/posts/" + post.getId();
+
+        // Thông báo cho chủ bài viết
+        User postOwner = post.getUser();
+        if (!postOwner.getId().equals(commenter.getId())) {
+            String msg = String.format("%s đã bình luận về bài viết của bạn: \"%s\"", 
+                    commenter.getActualUsername(), truncate(content, 50));
+            saveAndPushNotification(postOwner, msg, targetUrl);
+        }
+
+        // Thông báo cho những người đã từng bình luận
+        List<Long> otherCommenterIds = commentRepository.findByPostId(post.getId(), Pageable.unpaged())
+                .getContent().stream()
+                .map(c -> c.getUser().getId())
+                .filter(id -> !id.equals(commenter.getId()) && !id.equals(postOwner.getId()))
+                .distinct()
+                .collect(Collectors.toList());
+
+        for (Long id : otherCommenterIds) {
+            userRepository.findById(id).ifPresent(otherUser -> {
+                String msg = String.format("%s cũng đã bình luận về bài viết của %s.", 
+                        commenter.getActualUsername(), postOwner.getActualUsername());
+                saveAndPushNotification(otherUser, msg, targetUrl);
+            });
+        }
+    }
+
+    private void saveAndPushNotification(User targetUser, String message, String targetUrl) {
+        // Lưu DB
+        Notification notification = Notification.builder()
+                .user(targetUser)
+                .message(message)
+                .targetUrl(targetUrl)
+                .status("UNREAD")
+                .build();
+        notificationRepository.save(notification);
+
+        // Đẩy Push FCM
+        fcmService.sendToUser(targetUser, "Tương tác mới \uD83D\uDCDD", message);
+    }
+
+    private String truncate(String text, int length) {
+        if (text == null || text.length() <= length) return text;
+        return text.substring(0, length) + "...";
     }
 
     @Override

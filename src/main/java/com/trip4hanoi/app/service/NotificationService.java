@@ -12,5 +12,6 @@ public interface NotificationService {
     NotificationResponse updateNotification(Long id, NotificationRequest request);
     void deleteNotification(Long id);
     NotificationResponse markAsRead(Long id);
+    void markAllAsReadByUserId(Long userId);
     void updateFcmToken(Long userId, String token);
 }

@@ -34,6 +34,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final PlaceRepository placeRepository;
     private final UserRepository userRepository;
     private final ReviewMapper reviewMapper;
+    private final com.trip4hanoi.app.service.SmartNotificationEngine smartNotificationEngine;
 
     @Override
     @Transactional
@@ -49,6 +50,11 @@ public class ReviewServiceImpl implements ReviewService {
         review.setPlace(place);
 
         Review saved = reviewRepository.save(review);
+        
+        // --- SMART NOTIFICATION TRIGGER ---
+        // Thông báo cho những người khác cũng từng đánh giá địa điểm này
+        smartNotificationEngine.notifyNewReview(saved);
+
         return reviewMapper.toReviewResponse(saved);
     }
 

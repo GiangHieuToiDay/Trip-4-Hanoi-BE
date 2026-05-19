@@ -26,6 +26,9 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
+    @Column(name = "target_url")
+    private String targetUrl;
+
     private String status; // e.g., READ, UNREAD
 
     @Column(name = "created_at")

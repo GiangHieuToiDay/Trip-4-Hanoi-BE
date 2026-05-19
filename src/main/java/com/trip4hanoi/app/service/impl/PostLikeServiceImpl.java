@@ -11,6 +11,7 @@ import com.trip4hanoi.app.repository.PostLikeRepository;
 import com.trip4hanoi.app.repository.PostRepository;
 import com.trip4hanoi.app.repository.UserRepository;
 import com.trip4hanoi.app.service.PostLikeService;
+import com.trip4hanoi.app.service.SmartNotificationEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +31,7 @@ public class PostLikeServiceImpl implements PostLikeService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostLikeMapper postLikeMapper;
+    private final SmartNotificationEngine smartNotificationEngine;
 
     private Long getCurrentUserId() {
         var context = SecurityContextHolder.getContext();
@@ -52,7 +54,11 @@ public class PostLikeServiceImpl implements PostLikeService {
 
         postLikeRepository.findByUserAndPost(user, post).ifPresentOrElse(
                 postLikeRepository::delete,
-                () -> postLikeRepository.save(PostLike.builder().user(user).post(post).build())
+                () -> {
+                    postLikeRepository.save(PostLike.builder().user(user).post(post).build());
+                    // Gửi thông báo khi có Like mới
+                    smartNotificationEngine.notifyUserPostLike(user, post);
+                }
         );
     }
 
