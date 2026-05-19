@@ -17,6 +17,7 @@ public class ReportResponse {
     private String reporterName;
     private String reportType;
     private Long targetId;
+    private String targetTitle;
     private String reason;
     private String status;
     private LocalDateTime createdAt;

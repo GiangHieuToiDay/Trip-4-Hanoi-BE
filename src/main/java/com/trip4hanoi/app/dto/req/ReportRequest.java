@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 @AllArgsConstructor
 public class ReportRequest {
 
-    @NotBlank(message = "Report type is required (POST, COMMENT, USER)")
+    @NotBlank(message = "Report type is required (POST, COMMENT, USER, REVIEW)")
     private String reportType;
 
     @NotNull(message = "Target ID is required")
