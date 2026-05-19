@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,6 +54,22 @@ public class ChatRestController {
                 .code(1000)
                 .message("Get rooms list successfully")
                 .data(rooms)
+                .build());
+    }
+
+    @Operation(summary = "Get current user's active room", description = "Retrieve the active chat room for the authenticated user")
+    @GetMapping("/my-room")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<ChatRoomResponse>> getMyActiveRoom(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ChatRoomResponse room = chatService.getActiveRoomForUserByEmail(authentication.getName());
+        return ResponseEntity.ok(APIResponse.<ChatRoomResponse>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Get active room successfully")
+                .data(room)
                 .build());
     }
 }

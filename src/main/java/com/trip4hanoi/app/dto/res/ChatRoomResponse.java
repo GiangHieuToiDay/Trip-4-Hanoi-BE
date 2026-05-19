@@ -18,13 +18,16 @@ public class ChatRoomResponse {
     private Long id;
     private  Long userId;
     private String userName;
+    private String userAvatar;
     private Long staffId;
     private String staffName;
+    private String staffAvatar;
     private ChatRoomsStatus status;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime createdAt;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime updatedAt;
+    private Integer unreadCount;
     private ChatMessageResponse lastMessage;
 
 }

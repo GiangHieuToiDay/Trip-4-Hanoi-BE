@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     // tìm danh sách phòng theo trạng thái
-    List<ChatRoom> findByStatusOrderByCreatedAtDesc(ChatRoomsStatus status);
+    List<ChatRoom> findByStatusOrderByUpdatedAtDesc(ChatRoomsStatus status);
 
     // phòng mà nhân viên phụ trách
     List<ChatRoom> findByStaffAndStatus(Long staffId, ChatRoomsStatus status);

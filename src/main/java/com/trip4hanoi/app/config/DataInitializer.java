@@ -240,7 +240,8 @@ public class DataInitializer implements CommandLineRunner {
 
         // STAFF: Quản lý nội dung và kiểm duyệt cộng đồng
         Set<String> staffPermissionNames = Set.of(
-                "MANAGE_PLACE", "MANAGE_EVENT", "MODERATE_CONTENT", "VIEW_ALL","MANAGE_CATEGORY"
+                "MANAGE_PLACE", "MANAGE_EVENT", "MODERATE_CONTENT", "VIEW_ALL", "MANAGE_CATEGORY",
+                "APPROVE_CHAT", "MANAGE_CHAT"
         );
         Set<Permission> staffPermissions = allPermissions.stream()
                 .filter(p -> staffPermissionNames.contains(p.getName()))

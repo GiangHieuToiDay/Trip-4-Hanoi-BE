@@ -19,6 +19,7 @@ public class ChatMessageResponse {
     private ChatMessageType type;
     private Long senderId;
     private String senderName;
+    private String senderAvatar;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Ho_Chi_Minh")
     private LocalDateTime timestamp;
 }

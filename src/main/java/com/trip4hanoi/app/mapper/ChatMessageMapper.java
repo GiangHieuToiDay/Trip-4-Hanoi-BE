@@ -9,7 +9,8 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ChatMessageMapper {
     @Mapping(target = "senderId", source = "sender.id")
-    @Mapping(target = "senderName" , source = "sender.username")
+    @Mapping(target = "senderName" , source = "sender.actualUsername")
+    @Mapping(target = "senderAvatar", source = "sender.avatar")
     ChatMessageResponse toChatMessageResponse(ChatMessage chatMessage);
 
 

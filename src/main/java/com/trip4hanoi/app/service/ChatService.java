@@ -27,6 +27,10 @@ public interface ChatService {
     // lấy lịch sử tin nhán của 1 phòng
     List<ChatMessageResponse> getChatHistory(Long roomId);
 
+    // Lấy phòng chat hiện tại của user
+    ChatRoomResponse getActiveRoomForUser(Long userId);
+    ChatRoomResponse getActiveRoomForUserByEmail(String email);
+
     // lưu ghi chú nội bộ
     InternalNoteResponse addInternalNote(Long authorId,Long roomId, InternalNoteRequest request);
     InternalNoteResponse addInternalNoteByEmail(String email, Long roomId, InternalNoteRequest request);

@@ -9,6 +9,6 @@ import org.mapstruct.Mapping;
 public interface InternalNoteMapper {
 
     @Mapping(target = "authorId", source = "author.id")
-    @Mapping(target = "authorName", source = "author.username")
+    @Mapping(target = "authorName", source = "author.actualUsername")
     InternalNoteResponse toInternalNoteResponse(InternalNote internalNote);
 }

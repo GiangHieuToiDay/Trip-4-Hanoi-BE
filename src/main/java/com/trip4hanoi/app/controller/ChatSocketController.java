@@ -24,8 +24,11 @@ public class ChatSocketController {
      * Destination: /app/chat.sendMessage
      */
     @MessageMapping("/chat.sendMessage")
-    @PreAuthorize("isAuthenticated()")
     public void handleChatMessage(@Payload ChatMessageRequest request, Authentication authentication) {
+        if (authentication == null) {
+            log.error("[WS-ERROR] Unauthorized attempt to send message");
+            return;
+        }
         log.info("[WS] Message from {}: {}", authentication.getName(), request.getContent());
         chatService.sendMessageByEmail(authentication.getName(), request);
     }
@@ -35,8 +38,12 @@ public class ChatSocketController {
      * Destination: /app/chat.claimRoom.{roomId}
      */
     @MessageMapping("/chat.claimRoom.{roomId}")
-    @PreAuthorize("hasAuthority('APPROVE_CHAT')")
     public void handleClaimRoom(@DestinationVariable Long roomId, Authentication authentication) {
+        if (authentication == null || !hasAuthority(authentication, "APPROVE_CHAT")) {
+            log.error("[WS-ERROR] User {} has no authority to claim room", 
+                authentication != null ? authentication.getName() : "Anonymous");
+            return;
+        }
         log.info("[WS] Staff {} claiming room {}", authentication.getName(), roomId);
         chatService.claimRoomByEmail(authentication.getName(), roomId);
     }
@@ -46,11 +53,20 @@ public class ChatSocketController {
      * Destination: /app/chat.addNote.{roomId}
      */
     @MessageMapping("/chat.addNote.{roomId}")
-    @PreAuthorize("hasAuthority('MANAGE_CHAT')")
     public void handleInternalNote(@DestinationVariable Long roomId,
                                    @Payload InternalNoteRequest request,
                                    Authentication authentication) {
+        if (authentication == null || !hasAuthority(authentication, "MANAGE_CHAT")) {
+            log.error("[WS-ERROR] User {} has no authority to add internal notes", 
+                authentication != null ? authentication.getName() : "Anonymous");
+            return;
+        }
         log.info("[WS] Internal note by {} for room {}: {}", authentication.getName(), roomId, request.getContent());
         chatService.addInternalNoteByEmail(authentication.getName(), roomId, request);
+    }
+
+    private boolean hasAuthority(Authentication auth, String authority) {
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(authority));
     }
 }

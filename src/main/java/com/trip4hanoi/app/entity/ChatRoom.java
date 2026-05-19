@@ -45,6 +45,9 @@ public class ChatRoom {
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 
+    @Builder.Default
+    private Integer unreadCount = 0;
+
     @PrePersist
     protected void onCreate(){
         createdAt = LocalDateTime.now();

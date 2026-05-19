@@ -11,9 +11,11 @@ public interface ChatRoomMapper {
 
 
     @Mapping(target = "userId" ,source = "user.id")
-    @Mapping(target = "userName", source = "user.username")
+    @Mapping(target = "userName", source = "user.actualUsername")
+    @Mapping(target = "userAvatar", source = "user.avatar")
     @Mapping(target = "staffId", source = "staff.id")
-    @Mapping(target = "staffName", source = "staff.username")
+    @Mapping(target = "staffName", source = "staff.actualUsername")
+    @Mapping(target = "staffAvatar", source = "staff.avatar")
     @Mapping(target = "lastMessage", ignore = true)// set thủ công trong Service
     ChatRoomResponse tcChatRoomResponse(ChatRoom chatRoom);
 

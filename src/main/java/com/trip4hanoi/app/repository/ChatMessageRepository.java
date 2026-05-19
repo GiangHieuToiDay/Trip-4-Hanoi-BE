@@ -16,6 +16,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     //Lấy tin nhắn cuối cùng để hiển thị ở danh sách ben ngoài
     Optional<ChatMessage> findFirstByRoomIdOrderByTimestampDesc(Long roomId);
 
+    long countByRoomId(Long roomId);
+
 
     //=============================================================================================
     //DASHBOARD
