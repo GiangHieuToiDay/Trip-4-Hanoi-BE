@@ -4,6 +4,7 @@ import com.trip4hanoi.app.entity.PaymentOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -28,8 +29,8 @@ public interface PaymentOrderRepository extends JpaRepository<PaymentOrder, Long
     @Query("SELECT COUNT(DISTINCT p.user.id) FROM PaymentOrder p WHERE p.status = 'SUCCESS'")
     Long countProUsers();
 
-    @Query("SELECT DATE_FORMAT(p.createdAt, '%Y-%m') as month, SUM(p.amount) as revenue " +
-           "FROM PaymentOrder p WHERE p.status = 'SUCCESS' " +
-           "GROUP BY month ORDER BY month DESC")
+    @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, SUM(amount) as revenue " +
+           "FROM payment_orders WHERE status = 'SUCCESS' " +
+           "GROUP BY month ORDER BY month DESC", nativeQuery = true)
     List<Object[]> getRevenueGrowthByMonth();
 }

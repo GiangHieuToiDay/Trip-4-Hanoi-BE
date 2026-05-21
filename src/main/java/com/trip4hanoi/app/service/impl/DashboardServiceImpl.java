@@ -28,6 +28,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserLocationHistoryRepository locationRepository;
     private final GeminiService geminiService;
+    private final PaymentOrderRepository paymentOrderRepository;
 
     // Bổ sung RedisTemplate và ObjectMapper để cache thủ công
     private final RedisTemplate<String, String> redisTemplate;
