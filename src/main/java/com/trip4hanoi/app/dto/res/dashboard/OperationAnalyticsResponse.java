@@ -14,5 +14,6 @@ import java.util.Map;
 @AllArgsConstructor
 public class OperationAnalyticsResponse {
     private Map<Integer, Long> chatVolumeByHour;
+    private Map<String, Long> revenueGrowth;
     private List<String> aiTopKeywords;
 }

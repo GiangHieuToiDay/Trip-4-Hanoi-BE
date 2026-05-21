@@ -53,7 +53,8 @@ public class SecurityConfig {
             "/ws/**",
             "/swagger-ui.html",
             "/api/auth/verify",
-            "/api/auth/resend-verify"
+            "/api/auth/resend-verify",
+            "/api/payment/webhook"
     };
 
     private final String[] PUBLIC_GET_ENDPOINTS = {

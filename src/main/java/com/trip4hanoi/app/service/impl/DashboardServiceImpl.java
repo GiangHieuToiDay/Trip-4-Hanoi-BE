@@ -75,11 +75,16 @@ public class DashboardServiceImpl implements DashboardService {
         long convertedUsers = userRepository.countConvertedUsers();
         double conversionRate = totalTravelers == 0 ? 0 : (double) convertedUsers / totalTravelers * 100;
 
+        Long totalRevenue = paymentOrderRepository.sumTotalRevenue();
+        Long proUserCount = paymentOrderRepository.countProUsers();
+
         DashboardSummaryResponse response = DashboardSummaryResponse.builder()
                 .totalUsers(totalUsers)
                 .totalPlaces(placeRepository.count())
                 .totalPosts(postRepository.count())
                 .totalItineraries(itineraryRepository.count())
+                .totalRevenue(totalRevenue != null ? totalRevenue : 0)
+                .proUserCount(proUserCount != null ? proUserCount : 0)
                 .usersByRole(roleMap)
                 .conversionRate(Math.round(conversionRate * 100.0) / 100.0)
                 .heatmap(locationRepository.getHeatmapData(LocalDateTime.now().minusDays(30)))
@@ -229,11 +234,19 @@ public class DashboardServiceImpl implements DashboardService {
             }
         });
 
+        Map<String, Long> revenueGrowth = new LinkedHashMap<>();
+        paymentOrderRepository.getRevenueGrowthByMonth().forEach(obj -> {
+            if (obj != null && obj[0] != null && obj[1] != null) {
+                revenueGrowth.put(String.valueOf(obj[0]), ((Number) obj[1]).longValue());
+            }
+        });
+
         List<String> messages = chatMessageRepository.getRecentChatContents();
         List<String> keywords = analyzeKeywordsWithAI(messages);
 
         OperationAnalyticsResponse response = OperationAnalyticsResponse.builder()
                 .chatVolumeByHour(chatMap)
+                .revenueGrowth(revenueGrowth)
                 .aiTopKeywords(keywords)
                 .build();
         

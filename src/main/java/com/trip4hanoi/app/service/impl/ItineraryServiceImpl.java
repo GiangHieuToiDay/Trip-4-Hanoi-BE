@@ -657,8 +657,7 @@ public class ItineraryServiceImpl implements ItineraryService {
             
             if (place == null) continue;
 
-            int cost = item.getEstimatedCost() != null ? item.getEstimatedCost() : 
-                      (place.getPriceAvg() != null ? place.getPriceAvg() : 0);
+            int cost = parseEstimatedCost(item.getEstimatedCost(), place.getPriceAvg());
             
             totalCost += cost;
 
@@ -845,6 +844,24 @@ public class ItineraryServiceImpl implements ItineraryService {
             }
         }
         return 0L;
+    }
+
+    /**
+     * Helper to parse estimated cost from AI (which might contain "VND", dots, etc.)
+     */
+    private int parseEstimatedCost(String costStr, Integer defaultCost) {
+        if (costStr == null || costStr.isBlank()) {
+            return defaultCost != null ? defaultCost : 0;
+        }
+        try {
+            // Remove non-digit characters (dots, commas, currency symbols)
+            String digitsOnly = costStr.replaceAll("[^\\d]", "");
+            if (digitsOnly.isEmpty()) return defaultCost != null ? defaultCost : 0;
+            return Integer.parseInt(digitsOnly);
+        } catch (Exception e) {
+            log.warn(">>> Could not parse estimated cost: {}. Using default: {}", costStr, defaultCost);
+            return defaultCost != null ? defaultCost : 0;
+        }
     }
 
 

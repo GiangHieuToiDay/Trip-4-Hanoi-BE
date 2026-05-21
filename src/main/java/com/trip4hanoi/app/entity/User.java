@@ -88,6 +88,9 @@ public class User implements UserDetails {
     )
     private Set<Role> roles;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Subscription subscription;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<UserPreference> userPreferences; // Danh sách sở thích của user
 

@@ -14,5 +14,5 @@ public class ScheduleItem {
     private String activity;
     private Long placeId;
     private String note;
-    private Integer estimatedCost;
+    private String estimatedCost;
 }

@@ -17,6 +17,8 @@ public class DashboardSummaryResponse {
     private long totalPlaces;
     private long totalPosts;
     private long totalItineraries;
+    private long totalRevenue;
+    private long proUserCount;
     private Map<String, Long> usersByRole;
     private double conversionRate;
     private List<LocationCoordinateDTO> heatmap;

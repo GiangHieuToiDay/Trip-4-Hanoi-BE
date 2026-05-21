@@ -69,3 +69,13 @@ weather:
   api:
     key: ${API_KEY_OPEN_WEATHER}
     url: "https://api.openweathermap.org/data/2.5/weather"
+
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID}
+  api-key: ${PAYOS_API_KEY}
+  checksum-key: ${PAYOS_CHECKSUM_KEY}
+
+
+
+
