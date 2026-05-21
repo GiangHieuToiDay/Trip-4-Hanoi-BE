@@ -4,6 +4,7 @@ import com.trip4hanoi.app.dto.res.APIResponse;
 import com.trip4hanoi.app.dto.res.ChatMessageResponse;
 import com.trip4hanoi.app.dto.res.ChatRoomResponse;
 import com.trip4hanoi.app.service.ChatService;
+import com.trip4hanoi.app.service.CloudinaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -24,6 +28,49 @@ import java.util.List;
 public class ChatRestController {
 
     private final ChatService chatService;
+    private final CloudinaryService cloudinaryService;
+
+    @Operation(summary = "Upload chat images", description = "Upload up to 5 images to Cloudinary for chat messages")
+    @PostMapping("/upload-images")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<List<String>>> uploadImages(@RequestParam("files") List<MultipartFile> files) {
+        if(files==null || files.isEmpty()){
+            return ResponseEntity.badRequest().body(APIResponse.<List<String>>builder()
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .message("Vui lòng chọn ít nhất 1 ảnh")
+                    .build());
+        }
+        if (files.size() > 5) {
+            return ResponseEntity.badRequest().body(APIResponse.<List<String>>builder()
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .message("Bạn chỉ được gửi tối đa 5 ảnh một lúc")
+                    .build());
+        }
+
+        try {
+            List<String> urls = new ArrayList<>();
+            for (MultipartFile file : files) {
+                Map result  = cloudinaryService.uploadFile(file);
+                urls.add(result.get("url").toString());
+            }
+            return ResponseEntity.ok(APIResponse.<List<String>>builder()
+                    .status(HttpStatus.OK.value())
+                    .code(1000)
+                    .message("Upload ảnh thành công")
+                    .data(urls)
+                    .build());
+        }
+        catch (Exception e){
+            log.error("Lỗi upload ảnh chat: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(APIResponse.<List<String>>builder()
+                                        .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                        .message("Lỗi khi upload ảnh: " + e.getMessage())
+                    .build());
+        }
+
+    }
+
+
 
     @Operation(summary = "Get chat history", description = "Retrieve a list of messages for a specific chat room")
     @GetMapping("/rooms/{roomId}/messages")

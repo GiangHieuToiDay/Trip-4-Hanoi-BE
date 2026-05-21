@@ -1,11 +1,10 @@
 package com.trip4hanoi.app.repository;
 
+import com.trip4hanoi.app.common.ItineraryStatus;
 import com.trip4hanoi.app.entity.Itinerary;
-import com.trip4hanoi.app.entity.ItineraryStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;

@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.entity;
 
+import com.trip4hanoi.app.common.ItineraryStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;

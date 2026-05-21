@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trip4hanoi.app.common.ChatMessageType;
 import com.trip4hanoi.app.common.ChatRoomsStatus;
 import com.trip4hanoi.app.dto.req.ChatMessageRequest;
@@ -50,6 +51,7 @@ public class ChatServiceImpl implements ChatService {
     private final InternalNoteMapper internalNoteMapper;
 
     private  final SimpMessagingTemplate messagingTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
 
 
@@ -110,16 +112,28 @@ public class ChatServiceImpl implements ChatService {
                     });
         }
 
-        // Luu tin nhan cua user
+        // Xác định loại tin nhắn (USER hay STAFF)
         ChatMessageType messageType = ChatMessageType.USER;
         if (sender.getRoles().stream().anyMatch(r -> r.getName().equals("STAFF") || r.getName().equals("ADMIN"))) {
             messageType = ChatMessageType.STAFF;
+        }
+
+        //Xu ly anh moi
+        String mediaUrlsJson = null;
+        if(request.getMediaUrls() != null && !request.getMediaUrls().isEmpty()){
+            try {
+                mediaUrlsJson = objectMapper.writeValueAsString(request.getMediaUrls());
+            }
+            catch (Exception e) {
+                log.error("[CHAT-SECURITY] Error mapping json to string");
+            }
         }
 
         ChatMessage message = ChatMessage.builder()
                 .room(room)
                 .sender(sender)
                 .content(request.getContent())
+                .mediaUrls(mediaUrlsJson)
                 .type(messageType)
                 .build();
 

@@ -16,13 +16,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import jakarta.annotation.PostConstruct;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -39,10 +43,46 @@ public class GeminiServiceImpl implements GeminiService {
     private final ObjectMapper objectMapper;
 
     @Value("${gemini.api.key}")
-    private String apiKey;
+    private String apiKeysString;
+
+    private List<String> apiKeys;
+    private final AtomicInteger currentKeyIndex = new AtomicInteger(0);
+
+    @PostConstruct
+    public void init() {
+        if (apiKeysString != null && !apiKeysString.isEmpty()) {
+            apiKeys = java.util.Arrays.stream(apiKeysString.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+        } else {
+            apiKeys = new ArrayList<>();
+        }
+        log.info(">>> Loaded {} Gemini API Keys", apiKeys.size());
+    }
+
+    private String getCurrentKey() {
+        if (apiKeys.isEmpty()) return "";
+        return apiKeys.get(currentKeyIndex.get() % apiKeys.size());
+    }
+
+    private void rotateKey() {
+        if (apiKeys.size() > 1) {
+            int newIndex = currentKeyIndex.incrementAndGet();
+            log.warn(">>> Hết Quota! Tự động chuyển sang API Key dự phòng (Index: {})", newIndex % apiKeys.size());
+        }
+    }
 
     @Override
     public ChatResponse chatWithAI(String userMessage, Long userId) {
+        String currentKey = getCurrentKey();
+        if (currentKey.length() > 8) {
+            String maskedKey = currentKey.substring(0, 4) + "..." + currentKey.substring(currentKey.length() - 4);
+            log.info(">>> Using Gemini API Key: {}", maskedKey);
+        } else {
+            log.error(">>> Gemini API Key is MISSING or too short!");
+        }
+
         long startTime = System.currentTimeMillis();
 
         // Chạy song song các tác vụ lấy dữ liệu (Parallel Fetching)
@@ -90,12 +130,13 @@ public class GeminiServiceImpl implements GeminiService {
                 "Hệ thống: Bạn là 'Local Buddy' - một người bạn bản địa Hà Nội am hiểu. CHỈ TRẢ VỀ JSON KHÔNG CÓ MARKDOWN.\n" +
                 "Nhiệm vụ:\n" +
                 "1. Phân loại ý định của người dùng:\n" +
-                "   - Nếu người dùng chào hỏi, hỏi thăm sức khỏe, hoặc tán gẫu mà chưa yêu cầu lịch trình: Đặt timeline là [] và trả lời thân thiện trong 'introduction'.\n" +
-                "   - Nếu người dùng yêu cầu lên lịch trình, gợi ý chỗ đi, hoặc hỏi 'đi đâu': Thực hiện lên lịch trình chi tiết trong 'timeline'.\n" +
-                "2. Quy tắc nội dung:\n" +
+                "   - Nếu người dùng chào hỏi, tán gẫu: Đặt timeline là [] và trả lời thân thiện trong 'introduction'.\n" +
+                "   - Nếu người dùng yêu cầu lịch trình: Thực hiện lên lịch trình trong 'timeline'.\n" +
+                "2. Quy tắc nội dung quan trọng:\n" +
                 "   - Sử dụng ngôn ngữ GenZ, thân thiện, bản địa (ông, tôi, nhé, chill).\n" +
+                "   - TUYỆT ĐỐI KHÔNG hiển thị các con số ID địa điểm (ví dụ: 'ID 1', '[1]') trong nội dung văn bản (introduction và summary). Người dùng không được thấy các ID này.\n" +
+                "   - Các ID chỉ được dùng ngầm trong các trường 'placeId' của timeline và 'suggestedPlaceIds'.\n" +
                 "   - Nếu có lên lịch, ưu tiên địa điểm có Gu:true và có Sự kiện.\n" +
-                "   - 'suggestedPlaceIds' luôn chứa ID các địa điểm được nhắc tới.\n" +
                 "Bối cảnh người dùng: %s.\n" +
                 "Danh sách địa điểm khả dụng: %s.\n" +
                 "Sự kiện đang diễn ra: %s.\n" +
@@ -115,14 +156,30 @@ public class GeminiServiceImpl implements GeminiService {
         );
 
         try {
-            String finalUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey;
-            
-            Map<?, ?> response = geminiWebClient.post()
-                    .uri(finalUrl)
-                    .bodyValue(body)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+            Map<?, ?> response = Mono.defer(() -> {
+                String activeKey = getCurrentKey();
+                String finalUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + activeKey;
+                
+                return geminiWebClient.post()
+                        .uri(finalUrl)
+                        .bodyValue(body)
+                        .retrieve()
+                        .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> 
+                            clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                                log.error(">>> Gemini API Error Body: {}", errorBody);
+                                if (clientResponse.statusCode().value() == 429) {
+                                    rotateKey(); // Đổi key khi gặp lỗi 429
+                                }
+                                return clientResponse.createException();
+                            })
+                        )
+                        .bodyToMono(Map.class);
+            })
+            // Thử lại tối đa bằng tổng số key * 2 lần, mỗi lần cách nhau 1 giây
+            .retryWhen(reactor.util.retry.Retry.backoff(apiKeys.size() * 2L, Duration.ofSeconds(1))
+                    .filter(throwable -> throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests)
+                    .doBeforeRetry(retrySignal -> log.warn(">>> Retrying Gemini API... Attempt: {}", retrySignal.totalRetries() + 1)))
+            .block(Duration.ofSeconds(60));
 
             if (response == null || !response.containsKey("candidates")) {
                 throw new RuntimeException("AI response error");

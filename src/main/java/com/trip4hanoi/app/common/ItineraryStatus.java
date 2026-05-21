@@ -1,4 +1,4 @@
-package com.trip4hanoi.app.entity;
+package com.trip4hanoi.app.common;
 
 public enum ItineraryStatus {
     DRAFT,

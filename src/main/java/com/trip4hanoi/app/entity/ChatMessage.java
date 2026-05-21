@@ -34,6 +34,9 @@ public class ChatMessage {
 
     private LocalDateTime timestamp;
 
+    @Column(columnDefinition = "TEXT", name = "media_urls")
+    private String mediaUrls;
+
     @PrePersist
     protected  void onCreate(){
         timestamp = LocalDateTime.now();

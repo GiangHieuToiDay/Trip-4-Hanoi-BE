@@ -1,5 +1,6 @@
 package com.trip4hanoi.app.service.impl;
 
+import com.trip4hanoi.app.common.ItineraryStatus;
 import com.trip4hanoi.app.dto.req.*;
 import com.trip4hanoi.app.dto.res.ItineraryPlaceResponse;
 import com.trip4hanoi.app.dto.res.ItineraryResponse;
