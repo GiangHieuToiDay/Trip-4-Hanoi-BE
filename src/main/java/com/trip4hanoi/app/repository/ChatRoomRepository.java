@@ -15,7 +15,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     List<ChatRoom> findByStatusOrderByUpdatedAtDesc(ChatRoomsStatus status);
 
     // phòng mà nhân viên phụ trách
-    List<ChatRoom> findByStaffAndStatus(Long staffId, ChatRoomsStatus status);
+    List<ChatRoom> findByStaffIdAndStatus(Long staffId, ChatRoomsStatus status);
 
     // KIỂM tra xem user đã có phòng chat nào đang mở ( active hoặc pending) chưa
     Optional<ChatRoom> findByUserIdAndStatusNot(Long userId, ChatRoomsStatus status);

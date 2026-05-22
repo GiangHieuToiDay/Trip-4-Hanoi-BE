@@ -71,6 +71,7 @@ public class User implements UserDetails {
     @Column(name = "is_verified")
     private Boolean isVerified = false;
 
+    @Builder.Default
     @Column(name = "email_sent_count")
     private Integer emailSentCount = 0;
 
