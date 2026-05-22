@@ -62,7 +62,7 @@ app:
 #  baseurl: http://192.168.1.239:8080
   baseurl: http://localhost:8080
 google:
-  client-id: ${CLIENT-ID}
+  client-id: ${GOOGLE_CLIENT_ID}
 
 
 weather:

@@ -1,25 +1,68 @@
-
 spring:
   datasource:
-    url: ${PROD_DB_URL:jdbc:mysql://localhost:3306/trip4hanoi_prod}
-    username: ${PROD_DB_USERNAME:admin}
-    password: ${PROD_DB_PASSWORD:password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/trip4hanoi}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update # Trong production thực tế nên dùng 'none' hoặc 'validate' kèm Liquibase/Flyway
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 
 logging:
   level:
-    root: warn
-    com.trip4hanoi.app: info
+    root: info
+    com.trip4hanoi.app: info # Giảm log debug ở production
+
+# Giữ các cấu hình khác giống dev nhưng dùng biến môi trường
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
 
 gemini:
   api:
-    key: ${GEMINI_API_KEY:your_prod_key_here}
+    key: ${GEMINI_API_KEY}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+openapi:
+  service:
+    api-docs: TRIP4-HANOI
+    title: TRIP4 HA NOI APP API Document
+    version: 1.0.0
+    server: ${APP_BASE_URL:http://localhost:8080}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+
+weather:
+  api:
+    key: ${API_KEY_OPEN_WEATHER}
+    url: "https://api.openweathermap.org/data/2.5/weather"
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID}
+  api-key: ${PAYOS_API_KEY}
+  checksum-key: ${PAYOS_CHECKSUM_KEY}

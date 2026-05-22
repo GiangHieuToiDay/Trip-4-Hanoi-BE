@@ -1,9 +1,115 @@
+version: '3.8'
+
 services:
+  # 1. REDIS
   redis:
-    image: redis:8.0
+    image: redis:7.2-alpine
     container_name: redis-trip4-hanoi
     ports:
       - "6379:6379"
     command: redis-server --notify-keyspace-events Ex
+    networks:
+      - trip4-hanoi-network
+
+  # 2. Mysql SERVER
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: trip4hanoi
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - sql_server_data:/var/lib/mysql
+    networks:
+      - trip4-hanoi-network
+
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}" ]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+
+  # 3. BACKEND APP
+  app-server:
+    build: .
+    container_name: trip4-hanoi-backend
+    ports:
+      - "8080:8080"
+      - "8099:8099"
+    depends_on:
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - trip4-hanoi-network
+    environment:
+      # Kích hoạt profile prod
+      - SPRING_PROFILES_ACTIVE=prod
+
+      # Database & Redis
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+
+      # Security & JWT
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - APP_BASE_URL=${APP_BASE_URL}
+
+      # Social Auth (Google)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+
+
+      # Third-party Services
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - API_KEY_OPEN_WEATHER=${API_KEY_OPEN_WEATHER}
+
+      # Mail Configuration
+      - MAIL=${MAIL}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+
+      # PayOS
+      - PAYOS_CLIENT_ID=${PAYOS_CLIENT_ID}
+      - PAYOS_API_KEY=${PAYOS_API_KEY}
+      - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
+
+      # App Initialization
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - STAFF_PASSWORD=${STAFF_PASSWORD}
+
+networks:
+    trip4-hanoi-network:
+      driver: bridge
+
+volumes:
+    sql_server_data:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
