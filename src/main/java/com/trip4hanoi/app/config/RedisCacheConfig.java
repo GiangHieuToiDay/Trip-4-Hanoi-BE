@@ -6,10 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 
@@ -18,8 +18,8 @@ import java.time.Duration;
 public class RedisCacheConfig {
 
     /**
-     * Cấu hình Cache Manager cho Spring Boot 4.
-     * Sử dụng Dependency Injection để lấy ObjectMapper chuẩn (Jackson 3) từ hệ thống.
+     * Cấu hình Cache Manager cho Spring Boot 3.
+     * Sử dụng Dependency Injection để lấy ObjectMapper chuẩn (Jackson 2) từ hệ thống.
      */
     @Bean
     public RedisCacheManager cacheManager(
@@ -27,7 +27,7 @@ public class RedisCacheConfig {
             ObjectMapper objectMapper) {
 
         // Tạo Serializer dùng ObjectMapper của hệ thống
-        GenericJacksonJsonRedisSerializer jsonSerializer = new GenericJacksonJsonRedisSerializer(objectMapper);
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         // Cấu hình mặc định cho các cache dùng @Cacheable
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()

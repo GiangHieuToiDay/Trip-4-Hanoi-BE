@@ -15,6 +15,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,7 +34,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     // Bổ sung RedisTemplate và ObjectMapper để cache thủ công
     private final RedisTemplate<String, String> redisTemplate;
-    private final tools.jackson.databind.ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     private static final String CACHE_KEY_PREFIX = "dashboard_v2::";
     private static final long CACHE_TTL_HOURS = 24;
