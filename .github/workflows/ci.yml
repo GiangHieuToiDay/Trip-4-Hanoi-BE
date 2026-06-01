@@ -38,6 +38,24 @@ jobs:
           cache: 'maven'
 
       - name: Run test (Unit Test & Integration Test)
+        env:
+          MAIL: ${{ secrets.MAIL }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          API_KEY_OPEN_WEATHER: ${{ secrets.API_KEY_OPEN_WEATHER }}
+          PAYOS_CLIENT_ID: ${{ secrets.PAYOS_CLIENT_ID }}
+          PAYOS_API_KEY: ${{ secrets.PAYOS_API_KEY }}
+          PAYOS_CHECKSUM_KEY: ${{ secrets.PAYOS_CHECKSUM_KEY }}
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/trip4hanoi
+          DB_USERNAME: root
+          DB_PASSWORD: password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
         run: mvn test -Dspring.profiles.active=dev
 
       - name: Build with Maven
