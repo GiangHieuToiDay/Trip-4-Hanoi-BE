@@ -1,0 +1,12 @@
+# Cấu hình bỏ qua các thư mục/file không cần copy vào Docker
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.git
+.gitignore
+.idea
+*.iml
+.env
+src/test/
+src/main/resources/*.json

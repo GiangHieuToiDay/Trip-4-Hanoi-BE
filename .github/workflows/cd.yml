@@ -1,0 +1,34 @@
+name: Trip4 Hanoi BE (CD)
+
+on:
+  workflow_run:
+    workflows: ["Trip4 Hanoi BE"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Starting Backend Deployment..."
+            cd ~/trip4hanoi-deploy
+            
+            # Cập nhật Image Backend mới nhất
+            docker-compose-v2 pull app-server
+            
+            # Khởi động lại service backend
+            docker-compose-v2 up -d app-server
+            
+            # Dọn dẹp image cũ
+            docker image prune -f
+            
+            echo "Backend Deployment Successful!"

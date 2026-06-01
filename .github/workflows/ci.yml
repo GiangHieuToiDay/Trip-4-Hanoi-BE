@@ -83,3 +83,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/trip-4-hanoi-be:latest    
+                ${{secrets.DOCKER_USERNAME}}/backend-service:${{github.sha}}
+
