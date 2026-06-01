@@ -11,6 +11,21 @@ jobs:
   ci-pipeline:
     runs-on:  ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: trip4hanoi
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -23,7 +38,7 @@ jobs:
           cache: 'maven'
 
       - name: Run test (Unit Test & Integration Test)
-        run: mvn test
+        run: mvn test -Dspring.profiles.active=dev
 
       - name: Build with Maven
         run: mvn package -DskipTests
