@@ -9,4 +9,3 @@ mvnw.cmd
 *.iml
 .env
 src/test/
-src/main/resources/*.json

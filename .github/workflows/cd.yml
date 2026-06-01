@@ -21,14 +21,10 @@ jobs:
           script: |
             echo "Starting Backend Deployment..."
             cd ~/trip4hanoi-deploy
-            
             # Cập nhật Image Backend mới nhất
             docker-compose-v2 pull app-server
-            
             # Khởi động lại service backend
             docker-compose-v2 up -d app-server
-            
             # Dọn dẹp image cũ
             docker image prune -f
-            
             echo "Backend Deployment Successful!"
