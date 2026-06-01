@@ -15,7 +15,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: password
+          MYSQL_ROOT_PASSWORD: '123456'
           MYSQL_DATABASE: trip4hanoi
         ports:
           - 3306:3306
@@ -53,7 +53,7 @@ jobs:
           PAYOS_CHECKSUM_KEY: ${{ secrets.PAYOS_CHECKSUM_KEY }}
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/trip4hanoi
           DB_USERNAME: root
-          DB_PASSWORD: password
+          DB_PASSWORD: '123456'
           REDIS_HOST: localhost
           REDIS_PORT: 6379
         run: mvn test -Dspring.profiles.active=dev
