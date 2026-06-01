@@ -38,6 +38,11 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
+      - name: Create Firebase Config File
+        run: |
+          mkdir -p src/main/resources
+          echo '${{ secrets.FIREBASE_JSON }}' > src/main/resources/trip4hanoi-1a2ba-firebase-adminsdk-fbsvc-29ccb30801.json
+
       - name: Run test (Unit Test & Integration Test)
         env:
           MAIL: ${{ secrets.MAIL }}
