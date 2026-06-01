@@ -649,37 +649,39 @@ public class ItineraryServiceImpl implements ItineraryService {
         int totalCost = 0;
         int orderIndex = 1;
 
-        for (var item : request.getTimeline()) {
-            if (item.getPlaceId() == null) continue;
+        if (request.getTimeline() != null) {
+            for (var item : request.getTimeline()) {
+                if (item.getPlaceId() == null) continue;
 
-            Place place = placeRepository.findById(item.getPlaceId())
-                    .orElse(null);
-            
-            if (place == null) continue;
+                Place place = placeRepository.findById(item.getPlaceId())
+                        .orElse(null);
 
-            int cost = parseEstimatedCost(item.getEstimatedCost(), place.getPriceAvg());
-            
-            totalCost += cost;
+                if (place == null) continue;
 
-            // Map time to session
-            String session = "Morning";
-            if (item.getTime() != null) {
-                String timeStr = item.getTime().toLowerCase();
-                if (timeStr.contains("11:") || timeStr.contains("12:") || timeStr.contains("13:")) session = "Noon";
-                else if (timeStr.contains("14:") || timeStr.contains("15:") || timeStr.contains("16:") || timeStr.contains("17:")) session = "Afternoon";
-                else if (timeStr.contains("18:") || timeStr.contains("19:") || timeStr.contains("20:") || timeStr.contains("21:") || timeStr.contains("22:")) session = "Evening";
+                int cost = parseEstimatedCost(item.getEstimatedCost(), place.getPriceAvg());
+
+                totalCost += cost;
+
+                // Map time to session
+                String session = "Morning";
+                if (item.getTime() != null) {
+                    String timeStr = item.getTime().toLowerCase();
+                    if (timeStr.contains("11:") || timeStr.contains("12:") || timeStr.contains("13:")) session = "Noon";
+                    else if (timeStr.contains("14:") || timeStr.contains("15:") || timeStr.contains("16:") || timeStr.contains("17:")) session = "Afternoon";
+                    else if (timeStr.contains("18:") || timeStr.contains("19:") || timeStr.contains("20:") || timeStr.contains("21:") || timeStr.contains("22:")) session = "Evening";
+                }
+
+                ItineraryPlace ip = ItineraryPlace.builder()
+                        .itinerary(itinerary)
+                        .place(place)
+                        .dayNumber(1)
+                        .orderIndex(orderIndex++)
+                        .session(session)
+                        .estimatedCost(cost)
+                        .build();
+
+                itineraryPlaces.add(ip);
             }
-
-            ItineraryPlace ip = ItineraryPlace.builder()
-                    .itinerary(itinerary)
-                    .place(place)
-                    .dayNumber(1)
-                    .orderIndex(orderIndex++)
-                    .session(session)
-                    .estimatedCost(cost)
-                    .build();
-            
-            itineraryPlaces.add(ip);
         }
 
         itineraryPlaceRepository.saveAll(itineraryPlaces);

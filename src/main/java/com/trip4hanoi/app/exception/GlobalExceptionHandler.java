@@ -24,18 +24,6 @@ import java.util.Objects;
 @Slf4j(topic = "GLOBAL EXCEPTION")
 public class GlobalExceptionHandler {
 
-    //  Handle mọi lỗi chưa được định nghĩa (Ngân chặn 500 HTML triệt để)
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<APIResponse<Object>> handleUncaughtException(Exception e) {
-        log.error("Unhandled Exception: ", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                APIResponse.builder()
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                        .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
-                        .build()
-        );
-    }
 
     //  Handle lỗi sai Method (Fix lỗi "Unsupported methods" 405 thay vì 401)
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

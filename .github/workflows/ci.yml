@@ -1,0 +1,46 @@
+name: Trip4 Hanoi BE
+run-name: ${{github.action}}
+on:
+  push:
+    branches:
+      - master
+      - main
+      - dev
+
+jobs:
+  ci-pipeline:
+    runs-on:  ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          architecture: 'corretto'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Run test (Unit Test & Integration Test)
+        run: mvn test
+
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{secrets.DOCKER_USERNAME}}/backend-service:${{github.sha}}
