@@ -177,7 +177,10 @@ public class GeminiServiceImpl implements GeminiService {
             })
             // Thử lại tối đa bằng tổng số key * 2 lần, mỗi lần cách nhau 1 giây
             .retryWhen(reactor.util.retry.Retry.backoff(apiKeys.size() * 2L, Duration.ofSeconds(1))
-                    .filter(throwable -> throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests)
+                    .filter(throwable -> 
+                        throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests ||
+                        throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.ServiceUnavailable
+                    )
                     .doBeforeRetry(retrySignal -> log.warn(">>> Retrying Gemini API... Attempt: {}", retrySignal.totalRetries() + 1)))
             .block(Duration.ofSeconds(60));
 
