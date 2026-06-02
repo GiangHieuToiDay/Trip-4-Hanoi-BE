@@ -63,7 +63,7 @@ public class PaymentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. Xác định số tiền dựa trên gói
+        // Xác định số tiền dựa trên gói
         int amount = (request.getPackageType() == PlanType.PRO_1_MONTH) ? 150000 : 400000;
         String description = "Thanh toan goi " + request.getPackageType();
 
@@ -87,7 +87,7 @@ public class PaymentService {
         String cancelUrl = baseurl + "/payment/cancel";
 
         try {
-            // A. Tạo dữ liệu chữ ký theo yêu cầu của PayOS (Alphabetical order)
+            //  Tạo dữ liệu chữ ký theo yêu cầu của PayOS (Alphabetical order)
             String signatureData = "amount=" + amount + 
                                  "&cancelUrl=" + cancelUrl + 
                                  "&description=" + description + 
@@ -96,7 +96,7 @@ public class PaymentService {
             
             String signature = calculateHmacSha256(signatureData, checksumKey);
 
-            // B. Tạo Body Request
+            //  Tạo Body Request
             Map<String, Object> body = new HashMap<>();
             body.put("orderCode", orderCode);
             body.put("amount", amount);
@@ -106,7 +106,7 @@ public class PaymentService {
             body.put("signature", signature);
             body.put("expiredAt", expiredAt);
 
-            // C. Cấu hình Headers
+            //  Cấu hình Headers
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

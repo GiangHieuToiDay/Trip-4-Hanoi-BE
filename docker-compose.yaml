@@ -65,7 +65,7 @@ services:
 
       # Security & JWT
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - APP_BASE_URL=${APP_BASEURL}
+      - APP_BASEURL=${APP_BASEURL}
 
       # Social Auth (Google)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
