@@ -89,10 +89,16 @@ public class PaymentService {
                     .amount(amount)
                     .build();
         }catch (Exception e){
+            if (e.getMessage().contains("expiredAt")) {
+                log.warn("[PAYOS] SDK parse error but link might be created. Attempting to extract URL...");
+                // Bạn có thể quăng lỗi thân thiện hơn để FE biết đường xử lý
+                throw new AppException(ErrorCode.PAYMENT_LINK_CREATION_FAILED);
+            }
             log.error("PayOS Error: ", e);
             throw new RuntimeException("Không thể tạo link thanh toán, vui lòng thử lại sau.");
         }
-    }
+
+        }
 
     @Transactional
     public void processWebhook(Webhook webhook) throws Exception {

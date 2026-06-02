@@ -91,7 +91,9 @@ public enum ErrorCode {
     //chat
     ROOM_NOT_FOUND(1046, "Room not found", HttpStatus.BAD_REQUEST),
     ROOM_ALREADY_ASSIGNED(1047, "Room is already assigned", HttpStatus.BAD_REQUEST),
-    INVALID_STATUS(1048, "Invalid Status", HttpStatus.BAD_REQUEST);
+    INVALID_STATUS(1048, "Invalid Status", HttpStatus.BAD_REQUEST),
+
+    PAYMENT_LINK_CREATION_FAILED(1048, "Loi Payment", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;
