@@ -4,7 +4,8 @@ services:
   # 1. REDIS
   redis:
     image: redis:7.2-alpine
-    container_name: redis-trip4-hanoi
+    container_name:
+      redis-trip4-hanoi
     ports:
       - "6379:6379"
     command: redis-server --notify-keyspace-events Ex
