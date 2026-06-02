@@ -80,13 +80,18 @@ public class PaymentService {
                 .cancelUrl(cancelUrl)
                 .build();
 
-        CheckoutResponseData data = payOS.createPaymentLink(paymentData);
+        try {
+            CheckoutResponseData data = payOS.createPaymentLink(paymentData);
 
-        return PaymentResponse.builder()
-                .orderCode(String.valueOf(orderCode))
-                .checkoutUrl(data.getCheckoutUrl())
-                .amount(amount)
-                .build();
+            return PaymentResponse.builder()
+                    .orderCode(String.valueOf(orderCode))
+                    .checkoutUrl(data.getCheckoutUrl())
+                    .amount(amount)
+                    .build();
+        }catch (Exception e){
+            log.error("PayOS Error: ", e);
+            throw new RuntimeException("Không thể tạo link thanh toán, vui lòng thử lại sau.");
+        }
     }
 
     @Transactional

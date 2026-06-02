@@ -10,6 +10,7 @@ spring:
     time-zone: Asia/Ho_Chi_Minh
     deserialization:
       fail-on-unknown-properties: false
+
   
   profiles:
     active: "@spring.profiles.active@"
