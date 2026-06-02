@@ -8,6 +8,8 @@ spring:
   jackson:
     date-format: yyyy-MM-dd'T'HH:mm:ss.SSS
     time-zone: Asia/Ho_Chi_Minh
+    deserialization:
+      fail-on-unknown-properties: false
   
   profiles:
     active: "@spring.profiles.active@"
