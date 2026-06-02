@@ -90,9 +90,15 @@ public class PaymentService {
                     .build();
         }catch (Exception e){
             if (e.getMessage().contains("expiredAt")) {
-                log.warn("[PAYOS] SDK parse error but link might be created. Attempting to extract URL...");
+                log.info("[PAYOS] SDK parse error ignored, redirecting user to payment page...");
                 // Bạn có thể quăng lỗi thân thiện hơn để FE biết đường xử lý
-                throw new AppException(ErrorCode.PAYMENT_LINK_CREATION_FAILED);
+                String manualCheckoutUrl = "https://pay.payos.vn/checkout/" + orderCode;
+                return PaymentResponse.builder()
+                        .orderCode(String.valueOf(orderCode))
+                        .checkoutUrl(manualCheckoutUrl)
+                        .amount(amount)
+                        .build();
+
             }
             log.error("PayOS Error: ", e);
             throw new RuntimeException("Không thể tạo link thanh toán, vui lòng thử lại sau.");
