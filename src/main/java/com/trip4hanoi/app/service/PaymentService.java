@@ -1,6 +1,6 @@
 package com.trip4hanoi.app.service;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trip4hanoi.app.common.PaymentStatus;
 import com.trip4hanoi.app.common.PlanType;
@@ -23,16 +23,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import vn.payos.PayOS;
-import vn.payos.type.CheckoutResponseData;
-import vn.payos.type.PaymentData;
 import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +49,15 @@ public class PaymentService {
     @Value("${app.baseurl}")
     private String baseurl;
 
+    @Value("${payos.client-id}")
+    private String clientId;
+
+    @Value("${payos.api-key}")
+    private String apiKey;
+
+    @Value("${payos.checksum-key}")
+    private String checksumKey;
+
     @Transactional
     public PaymentResponse createPaymentLink(CreatePaymentRequest request, Long userId) throws Exception {
         User user = userRepository.findById(userId)
@@ -56,10 +67,10 @@ public class PaymentService {
         int amount = (request.getPackageType() == PlanType.PRO_1_MONTH) ? 150000 : 400000;
         String description = "Thanh toan goi " + request.getPackageType();
 
-        // Tạo mã đơn hàng ngẫu nhiên (Số nguyên cho PayOS)
-        long orderCode = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(1, 11));
+        // Tạo mã đơn hàng ngẫu nhiên (10 chữ số)
+        long orderCode = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(3, 13));
+        long expiredAt = (System.currentTimeMillis() / 1000) + (15 * 60); // 15 phút từ bây giờ
 
-        long expiredAt = (System.currentTimeMillis() / 1000) + (15 * 60);
         // Lưu vào database của mình trước với trạng thái PENDING
         PaymentOrder order = PaymentOrder.builder()
                 .orderCode(String.valueOf(orderCode))
@@ -71,63 +82,96 @@ public class PaymentService {
 
         paymentOrderRepository.save(order);
 
-        // Gọi PayOS tạo link
+        // --- GỌI API PAYOS TRỰC TIẾP QUA REST TEMPLATE (NÉ LỖI SDK) ---
         String returnUrl = baseurl + "/payment/success";
         String cancelUrl = baseurl + "/payment/cancel";
 
         try {
-            PaymentData paymentData = PaymentData.builder()
-                    .orderCode(orderCode)
-                    .amount(amount)
-                    .description("Thanh toan goi " + request.getPackageType())
-                    .returnUrl(returnUrl)
-                    .cancelUrl(cancelUrl)
-                    .expiredAt(Math.toIntExact(expiredAt))
-                    .build();
+            // A. Tạo dữ liệu chữ ký theo yêu cầu của PayOS (Alphabetical order)
+            String signatureData = "amount=" + amount + 
+                                 "&cancelUrl=" + cancelUrl + 
+                                 "&description=" + description + 
+                                 "&orderCode=" + orderCode + 
+                                 "&returnUrl=" + returnUrl;
+            
+            String signature = calculateHmacSha256(signatureData, checksumKey);
 
-            log.info("[PAYOS] Sending request to PayOS for order: {}", orderCode);
-            CheckoutResponseData data = payOS.createPaymentLink(paymentData);
+            // B. Tạo Body Request
+            Map<String, Object> body = new HashMap<>();
+            body.put("orderCode", orderCode);
+            body.put("amount", amount);
+            body.put("description", description);
+            body.put("cancelUrl", cancelUrl);
+            body.put("returnUrl", returnUrl);
+            body.put("signature", signature);
+            body.put("expiredAt", expiredAt);
 
-            return PaymentResponse.builder()
-                    .orderCode(String.valueOf(orderCode))
-                    .checkoutUrl(data.getCheckoutUrl())
-                    .amount(amount)
-                    .expiredAt(expiredAt)
-                    .build();
-        } catch (Exception e) {
-            log.warn("[PAYOS-FIX] Exception caught: {}", e.getMessage());
-            if (e.getMessage() != null && e.getMessage().contains("expiredAt")) {
-                 log.info("[PAYOS-FIX] Ignored parse error, returning fallback URL.");
-                 return PaymentResponse.builder()
-                    .orderCode(String.valueOf(orderCode))
-                    .checkoutUrl("https://pay.payos.vn/web/" + orderCode) 
-                    .amount(amount)
-                    .expiredAt(expiredAt)
-                    .build();
+            // C. Cấu hình Headers
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-client-id", clientId);
+            headers.set("x-api-key", apiKey);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            
+            log.info("[PAYOS-NATIVE] Creating payment link for order: {}", orderCode);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                "https://api-merchant.payos.vn/v2/payment-requests", 
+                entity, 
+                String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode root = mapper.readTree(response.getBody());
+                String checkoutUrl = root.path("data").path("checkoutUrl").asText();
+
+                return PaymentResponse.builder()
+                        .orderCode(String.valueOf(orderCode))
+                        .checkoutUrl(checkoutUrl)
+                        .amount(amount)
+                        .expiredAt(expiredAt)
+                        .build();
+            } else {
+                throw new RuntimeException("PayOS API returned: " + response.getStatusCode());
             }
-            throw e;
-        }
 
+        } catch (Exception e) {
+            log.error("[PAYOS-ERROR] Native API Call failed: {}", e.getMessage());
+            throw new AppException(ErrorCode.PAYMENT_LINK_CREATION_FAILED);
         }
+    }
 
     @Transactional
     public void processWebhook(Webhook webhook) throws Exception {
-        // Xác thực chữ ký từ PayOS (Dùng SDK để verify)
+        // Vẫn dùng SDK để verify data (vì phần này thường không bị lỗi expiredAt)
         WebhookData data = payOS.verifyPaymentWebhookData(webhook);
 
-        // Tìm đơn hàng trong DB của mình
         PaymentOrder order = paymentOrderRepository.findByOrderCode(String.valueOf(data.getOrderCode()))
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Nếu đơn hàng chưa thành công thì mới xử lý
         if (order.getStatus() == PaymentStatus.PENDING) {
             order.setStatus(PaymentStatus.SUCCESS);
             order.setPayosOrderCode(data.getOrderCode());
             paymentOrderRepository.save(order);
-
-            // Cập nhật hoặc tạo mới subscription cho User
             updateUserSubscription(order.getUser(), order.getPackageType());
         }
+    }
+
+    // Hàm hỗ trợ tính chữ ký HMAC-SHA256
+    private String calculateHmacSha256(String data, String key) throws Exception {
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(), "HmacSHA256");
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] rawHmac = mac.doFinal(data.getBytes());
+        
+        StringBuilder result = new StringBuilder();
+        for (byte b : rawHmac) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
 
     @Transactional(readOnly = true)
@@ -182,7 +226,6 @@ public class PaymentService {
             order.setStatus(newStatus);
             paymentOrderRepository.save(order);
 
-            // Nếu Admin chuyển sang SUCCESS thủ công, hãy nâng cấp cho User
             if (newStatus == PaymentStatus.SUCCESS) {
                 updateUserSubscription(order.getUser(), order.getPackageType());
             }
@@ -203,7 +246,6 @@ public class PaymentService {
         LocalDateTime startDate = (subscription.getEndDate() != null && subscription.getEndDate().isAfter(now)) 
                 ? subscription.getEndDate() : now;
 
-        // Tính toán ngày hết hạn dựa trên gói
         int daysToAdd = (packageType == PlanType.PRO_1_MONTH) ? 30 : 90;
         LocalDateTime endDate = startDate.plusDays(daysToAdd);
 
