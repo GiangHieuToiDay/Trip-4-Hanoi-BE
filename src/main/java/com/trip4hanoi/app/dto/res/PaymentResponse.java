@@ -10,4 +10,5 @@ public class PaymentResponse {
     private String checkoutUrl;// Link thanh toán PayOS sinh ra
     private String qrCode;// (Tùy chọn) Một số SDK trả về text QR
     private Integer amount;
+    private Long expiredAt;
 }

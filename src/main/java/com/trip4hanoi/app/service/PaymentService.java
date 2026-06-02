@@ -59,6 +59,7 @@ public class PaymentService {
         // Tạo mã đơn hàng ngẫu nhiên (Số nguyên cho PayOS)
         long orderCode = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(1, 11));
 
+        long expiredAt = (System.currentTimeMillis() / 1000) + (15 * 60);
         // Lưu vào database của mình trước với trạng thái PENDING
         PaymentOrder order = PaymentOrder.builder()
                 .orderCode(String.valueOf(orderCode))
@@ -75,14 +76,14 @@ public class PaymentService {
         String cancelUrl = baseurl + "/payment/cancel";
 
         try {
-        PaymentData paymentData = PaymentData.builder()
-                .orderCode(orderCode)
-                .amount(amount)
-                .description("Thanh toan goi " + request.getPackageType())
-                .returnUrl(returnUrl)
-                .cancelUrl(cancelUrl)
-                .build();
-
+            PaymentData paymentData = PaymentData.builder()
+                    .orderCode(orderCode)
+                    .amount(amount)
+                    .description("Thanh toan goi " + request.getPackageType())
+                    .returnUrl(returnUrl)
+                    .cancelUrl(cancelUrl)
+                    .expiredAt(Math.toIntExact(expiredAt))
+                    .build();
 
             log.info("[PAYOS] Sending request to PayOS for order: {}", orderCode);
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
@@ -91,18 +92,20 @@ public class PaymentService {
                     .orderCode(String.valueOf(orderCode))
                     .checkoutUrl(data.getCheckoutUrl())
                     .amount(amount)
+                    .expiredAt(expiredAt)
                     .build();
-        }catch (Exception e){
-            log.warn("[PAYOS-FIX] SDK Parse error, generating manual link for order: {}", orderCode);
-
-
-            return PaymentResponse.builder()
+        } catch (Exception e) {
+            log.warn("[PAYOS-FIX] Exception caught: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("expiredAt")) {
+                 log.info("[PAYOS-FIX] Ignored parse error, returning fallback URL.");
+                 return PaymentResponse.builder()
                     .orderCode(String.valueOf(orderCode))
-                    .checkoutUrl("https://pay.payos.vn/web/" + orderCode) // PayOS đôi khi dùng /web/
+                    .checkoutUrl("https://pay.payos.vn/web/" + orderCode) 
                     .amount(amount)
+                    .expiredAt(expiredAt)
                     .build();
-
-
+            }
+            throw e;
         }
 
         }

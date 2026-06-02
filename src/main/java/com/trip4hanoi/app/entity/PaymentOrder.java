@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentOrder {
+public class  PaymentOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,5 +59,7 @@ public class PaymentOrder {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updateDate;
+
+
 
 }
