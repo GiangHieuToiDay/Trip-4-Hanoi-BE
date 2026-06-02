@@ -1,5 +1,7 @@
 package com.trip4hanoi.app.service;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trip4hanoi.app.common.PaymentStatus;
 import com.trip4hanoi.app.common.PlanType;
 import com.trip4hanoi.app.dto.req.CreatePaymentRequest;
@@ -81,27 +83,23 @@ public class PaymentService {
                 .build();
 
         try {
+            log.info("[PAYOS] Sending request to PayOS for order: {}", orderCode);
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-
+            // Lấy đúng link từ hệ thống trả về
+            String realUrl = data.getCheckoutUrl();
+            log.info("[PAYOS] Link created successfully: {}", realUrl);
             return PaymentResponse.builder()
                     .orderCode(String.valueOf(orderCode))
-                    .checkoutUrl(data.getCheckoutUrl())
+                    .checkoutUrl(realUrl)
                     .amount(amount)
                     .build();
         }catch (Exception e){
-            if (e.getMessage().contains("expiredAt")) {
-                log.info("[PAYOS] SDK parse error ignored, redirecting user to payment page...");
-                // Bạn có thể quăng lỗi thân thiện hơn để FE biết đường xử lý
-                String manualCheckoutUrl = "https://pay.payos.vn/checkout/" + orderCode;
-                return PaymentResponse.builder()
-                        .orderCode(String.valueOf(orderCode))
-                        .checkoutUrl(manualCheckoutUrl)
-                        .amount(amount)
-                        .build();
+            log.warn("[PAYOS] SDK error detected. Attempting manual fix...");
 
-            }
-            log.error("PayOS Error: ", e);
-            throw new RuntimeException("Không thể tạo link thanh toán, vui lòng thử lại sau.");
+        log.error("PayOS Error: ", e);
+        throw new RuntimeException("Không thể tạo link thanh toán, vui lòng thử lại sau.");
+
+
         }
 
         }
