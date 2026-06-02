@@ -85,12 +85,10 @@ public class PaymentService {
         try {
             log.info("[PAYOS] Sending request to PayOS for order: {}", orderCode);
             CheckoutResponseData data = payOS.createPaymentLink(paymentData);
-            // Lấy đúng link từ hệ thống trả về
-            String realUrl = data.getCheckoutUrl();
-            log.info("[PAYOS] Link created successfully: {}", realUrl);
+
             return PaymentResponse.builder()
                     .orderCode(String.valueOf(orderCode))
-                    .checkoutUrl(realUrl)
+                    .checkoutUrl(data.getCheckoutUrl())
                     .amount(amount)
                     .build();
         }catch (Exception e){
