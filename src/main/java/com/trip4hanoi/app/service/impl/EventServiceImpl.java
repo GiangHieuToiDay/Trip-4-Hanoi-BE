@@ -302,4 +302,17 @@ public class EventServiceImpl implements EventService {
         
         return response;
     }
+
+    @Override
+    public List<EventResponse> getFollowedEvents(Long userId) {
+        List<UserEventFollow> follows = userEventFollowRepository.findByUserId(userId);
+        return follows.stream()
+                .map(follow -> {
+                    EventResponse res = eventMapper.toEventResponse(follow.getEvent());
+                    res.setFollowCount(userEventFollowRepository.countByEventId(follow.getEvent().getId()));
+                    res.setIsFollowed(true);
+                    return res;
+                })
+                .collect(Collectors.toList());
+    }
 }

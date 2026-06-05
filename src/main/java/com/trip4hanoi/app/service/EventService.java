@@ -18,6 +18,7 @@ public interface EventService {
     EventResponse createEvent(EventRequest request, MultipartFile[] images);
     EventResponse updateEvent(Long id, EventRequest request, MultipartFile[] images);
     void deleteEvent(Long id);
-    PageResponse<EventResponse> getAllEventsAdmin(String keyword, Long placeId, int page, int size);
+    PageResponse<EventResponse> getAllAdmin(String keyword, Long placeId, int page, int size);
     EventResponse getEventById(Long id);
+    List<EventResponse> getFollowedEvents(Long userId);
 }

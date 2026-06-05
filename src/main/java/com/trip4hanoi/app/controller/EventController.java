@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @RestController
@@ -96,6 +98,23 @@ public class EventController {
                 .build());
     }
 
+    /**
+     * ENDPOINT - USER: Lấy danh sách sự kiện đang theo dõi
+     */
+    @GetMapping("/followed")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<APIResponse<List<EventResponse>>> getFollowedEvents(
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = jwt.getClaim("id");
+        List<EventResponse> result = eventService.getFollowedEvents(userId);
+        return ResponseEntity.ok(APIResponse.<List<EventResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .code(1000)
+                .message("Successfully retrieved followed events")
+                .data(result)
+                .build());
+    }
+
 
     /**
      * ENDPOINT - ADMIN: Tạo sự kiện mới kèm album ảnh
@@ -160,7 +179,7 @@ public class EventController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageResponse<EventResponse> result = eventService.getAllEventsAdmin(keyword, placeId, page, size);
+        PageResponse<EventResponse> result = eventService.getAllAdmin(keyword, placeId, page, size);
         return ResponseEntity.ok(APIResponse.<PageResponse<EventResponse>>builder()
                 .status(HttpStatus.OK.value())
                 .code(1000)
