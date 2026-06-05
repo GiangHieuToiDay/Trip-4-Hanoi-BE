@@ -270,7 +270,7 @@ public class EventServiceImpl implements EventService {
      * ENDPOINT - ADMIN: Lấy tất cả sự kiện (bao gồm đã xóa mềm) cho dashboard
      */
     @Override
-    public PageResponse<EventResponse> getAllEventsAdmin(String keyword, Long placeId, int page, int size) {
+    public PageResponse<EventResponse> getAllAdmin(String keyword, Long placeId, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("id").descending());
         Page<Event> eventPage = eventRepository.searchEventsAdmin(keyword, placeId, pageable);
 
