@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j(topic = "DATA INITIALIZER")
 @Profile("!prod")
-public class DataInitializer implements CommandLineRunner {
+public class DataInitializer   implements CommandLineRunner {
 
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
