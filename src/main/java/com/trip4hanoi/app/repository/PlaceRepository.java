@@ -18,6 +18,8 @@ import java.util.Optional;
 public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecificationExecutor<Place> {
     List<Place> findByCategoryIdAndDeletedFalse(Long categoryId);
     @EntityGraph(attributePaths = {"category", "images"})
+    List<Place> findAllByDeletedFalse();
+    @EntityGraph(attributePaths = {"category", "images"})
     List<Place> findAllByDeletedFalse(Sort sort);
     Optional<Place> findByNameAndDeletedFalse(String name);
     Optional<Place> findByName(String name);
