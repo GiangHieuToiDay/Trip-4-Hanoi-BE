@@ -19,10 +19,13 @@ import com.trip4hanoi.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +49,7 @@ public class PaymentService {
     private final PayOS payOS;
     private final SubscriptionRepository subscriptionRepository;
     private final NotificationService notificationService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${app.baseurl}")
     private String baseurl;
@@ -159,6 +163,9 @@ public class PaymentService {
             paymentOrderRepository.save(order);
             Subscription sub = updateUserSubscription(order.getUser(), order.getPackageType());
 
+            // Xóa cache dashboard để cập nhật doanh thu mới
+            clearDashboardCache();
+
             // Gửi thông báo cho người dùng
             try {
                 String packageName = (order.getPackageType() == PlanType.PRO_1_MONTH) ? "PRO 1 Tháng" : "PRO 3 Tháng";
@@ -246,6 +253,7 @@ public class PaymentService {
 
             if (newStatus == PaymentStatus.SUCCESS) {
                 updateUserSubscription(order.getUser(), order.getPackageType());
+                clearDashboardCache();
             }
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status");
@@ -273,5 +281,17 @@ public class PaymentService {
         subscription.setIsActive(true);
 
         return subscriptionRepository.save(subscription);
+    }
+
+    private void clearDashboardCache() {
+        try {
+            Set<String> keys = redisTemplate.keys("dashboard_v2::*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("[CACHE] Cleared dashboard cache due to successful payment");
+            }
+        } catch (Exception e) {
+            log.error("[CACHE-ERROR] Failed to clear dashboard cache: {}", e.getMessage());
+        }
     }
 }
