@@ -43,13 +43,16 @@ public class EventReminderServiceImpl implements EventReminderService {
                 Event event = eventRepository.findById(sub.getEventId()).orElseThrow();
                 User user = userRepository.findById(sub.getUserId()).orElseThrow();
 
+                String title = "Nhắc lịch sự kiện";
                 String message = "Sự kiện sắp diễn ra: " + event.getName();
 
                 // 1. lưu DB
                 Notification noti = Notification.builder()
                         .user(user)
                         .event(event)
+                        .title(title)
                         .message(message)
+                        .type("REMINDER")
                         .status("UNREAD")
                         .createdAt(LocalDateTime.now())
                         .build();
@@ -57,7 +60,7 @@ public class EventReminderServiceImpl implements EventReminderService {
                 notificationRepository.save(noti);
 
                 // 2. gửi FCM
-                fcmService.sendToUser(user, "Nhắc lịch sự kiện", message);
+                fcmService.sendToUser(user, title, message);
 
                 // 3. mark success
                 sub.setNotified(true);

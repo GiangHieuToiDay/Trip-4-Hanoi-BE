@@ -17,6 +17,8 @@ public interface NotificationMapper {
 
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "event", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "targetUrl", source = "targetUrl")
     Notification toNotification(NotificationRequest request);
 

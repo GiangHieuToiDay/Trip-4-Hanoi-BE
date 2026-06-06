@@ -9,7 +9,9 @@ import lombok.*;
 public class NotificationRequest {
     private Long userId;
     private Long eventId;
+    private String title;
     private String message;
+    private String type;
     private String targetUrl;
     private String status;
 }

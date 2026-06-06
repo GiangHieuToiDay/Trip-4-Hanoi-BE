@@ -73,16 +73,19 @@ public class DailyNotificationJob {
 
         for (User user : activeUsers) {
             try {
+                String title = "Trip4Hanoi: Bản tin sáng sớm \u2615";
                 // Lưu vào DB Notification
                 Notification notification = Notification.builder()
                         .user(user)
+                        .title(title)
                         .message(fullMessage)
+                        .type("NEWSLETTER")
                         .status("UNREAD")
                         .build();
                 notificationRepository.save(notification);
 
                 // Gửi qua FCM
-                fcmService.sendToUser(user, "Trip4Hanoi: Bản tin sáng sớm \u2615", fullMessage);
+                fcmService.sendToUser(user, title, fullMessage);
             } catch (Exception e) {
                 log.error("Lỗi khi gửi thông báo cho user {}: {}", user.getEmail(), e.getMessage());
             }

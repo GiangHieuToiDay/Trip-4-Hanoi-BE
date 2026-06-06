@@ -105,17 +105,20 @@ public class CommentServiceImpl implements CommentService {
     }
 
     private void saveAndPushNotification(User targetUser, String message, String targetUrl) {
+        String title = "Tương tác mới \uD83D\uDCDD";
         // Lưu DB
         Notification notification = Notification.builder()
                 .user(targetUser)
+                .title(title)
                 .message(message)
+                .type("SOCIAL")
                 .targetUrl(targetUrl)
                 .status("UNREAD")
                 .build();
         notificationRepository.save(notification);
 
         // Đẩy Push FCM
-        fcmService.sendToUser(targetUser, "Tương tác mới \uD83D\uDCDD", message);
+        fcmService.sendToUser(targetUser, title, message);
     }
 
     private String truncate(String text, int length) {

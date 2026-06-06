@@ -12,7 +12,9 @@ public class NotificationResponse {
     private Long id;
     private Long userId;
     private Long eventId;
+    private String title;
     private String message;
+    private String type;
     private String targetUrl;
     private String status;
 

@@ -23,8 +23,12 @@ public class Notification {
     @JoinColumn(name = "event_id")
     private Event event;
 
+    private String title;
+
     @Column(nullable = false)
     private String message;
+
+    private String type; // e.g., SYSTEM, EVENT, PAYMENT
 
     @Column(name = "target_url")
     private String targetUrl;

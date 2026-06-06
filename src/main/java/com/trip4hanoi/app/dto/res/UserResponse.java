@@ -55,4 +55,16 @@ public class UserResponse {
     private LocalDateTime createdAt;
 
     private Boolean isLocationTrackingEnabled;
+
+    private SubscriptionResponse subscription;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SubscriptionResponse {
+        private String planType;
+        private LocalDateTime endDate;
+        private Boolean isActive;
+    }
 }

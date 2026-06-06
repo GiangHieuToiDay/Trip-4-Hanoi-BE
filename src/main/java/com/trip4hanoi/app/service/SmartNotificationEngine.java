@@ -114,11 +114,13 @@ public class SmartNotificationEngine {
         saveAndPush(user, title, message, targetUrl);
     }
 
-    private void saveAndPush(User user, String title, String message, String targetUrl) {
+    private void saveAndPush(User user, String title, String message, String targetUrl, String type) {
         // 1. Lưu vào Database
         Notification notification = Notification.builder()
                 .user(user)
+                .title(title)
                 .message(message)
+                .type(type)
                 .targetUrl(targetUrl)
                 .status("UNREAD")
                 .build();
@@ -130,8 +132,12 @@ public class SmartNotificationEngine {
         }
     }
 
+    private void saveAndPush(User user, String title, String message, String targetUrl) {
+        saveAndPush(user, title, message, targetUrl, "SYSTEM");
+    }
+
     private void saveAndPush(User user, String title, String message) {
-        saveAndPush(user, title, message, null);
+        saveAndPush(user, title, message, null, "SYSTEM");
     }
 
     /**

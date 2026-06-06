@@ -69,6 +69,7 @@ public class ReportServiceImpl implements ReportService {
             if (adminRole != null) {
                 List<User> admins = userRepository.findByRolesContaining(adminRole);
                 String targetName = getTargetTitle(reportType, targetId);
+                String title = "Cảnh báo hệ thống \uD83D\uDEA8";
                 String message = String.format("CẢNH BÁO: %s '%s' (ID %d) đã bị báo cáo %d lần. Vui lòng kiểm tra!", 
                         reportType, targetName, targetId, count);
                 
@@ -76,13 +77,15 @@ public class ReportServiceImpl implements ReportService {
                     //  Lưu vào DB Notification
                     Notification notification = Notification.builder()
                             .user(admin)
+                            .title(title)
                             .message(message)
+                            .type("ALERT")
                             .status("UNREAD")
                             .build();
                     notificationRepository.save(notification);
 
                     // 2. Gửi Push FCM cho Admin nếu có token
-                    fcmService.sendToUser(admin, "Cảnh báo hệ thống \uD83D\uDEA8", message);
+                    fcmService.sendToUser(admin, title, message);
                 }
             }
         }

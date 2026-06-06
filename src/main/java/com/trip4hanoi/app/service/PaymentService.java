@@ -45,6 +45,7 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final PayOS payOS;
     private final SubscriptionRepository subscriptionRepository;
+    private final NotificationService notificationService;
 
     @Value("${app.baseurl}")
     private String baseurl;
@@ -156,7 +157,24 @@ public class PaymentService {
             order.setStatus(PaymentStatus.SUCCESS);
             order.setPayosOrderCode(data.getOrderCode());
             paymentOrderRepository.save(order);
-            updateUserSubscription(order.getUser(), order.getPackageType());
+            Subscription sub = updateUserSubscription(order.getUser(), order.getPackageType());
+
+            // Gửi thông báo cho người dùng
+            try {
+                String packageName = (order.getPackageType() == PlanType.PRO_1_MONTH) ? "PRO 1 Tháng" : "PRO 3 Tháng";
+                String message = String.format("Chúc mừng! Bạn đã đăng ký thành công gói %s. Thời hạn sử dụng đến hết ngày %s.",
+                        packageName, sub.getEndDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                
+                notificationService.createNotification(com.trip4hanoi.app.dto.req.NotificationRequest.builder()
+                        .userId(order.getUser().getId())
+                        .title("Thanh toán thành công")
+                        .message(message)
+                        .type("SYSTEM")
+                        .status("UNREAD")
+                        .build());
+            } catch (Exception e) {
+                log.error("[PAYMENT-NOTIFICATION] Failed to send notification: {}", e.getMessage());
+            }
         }
     }
 
@@ -234,7 +252,7 @@ public class PaymentService {
         }
     }
 
-    private void updateUserSubscription(User user, PlanType packageType) {
+    private Subscription updateUserSubscription(User user, PlanType packageType) {
         Subscription subscription = subscriptionRepository.findByUser(user)
                 .orElse(Subscription.builder()
                         .user(user)
@@ -254,6 +272,6 @@ public class PaymentService {
         subscription.setEndDate(endDate);
         subscription.setIsActive(true);
 
-        subscriptionRepository.save(subscription);
+        return subscriptionRepository.save(subscription);
     }
 }

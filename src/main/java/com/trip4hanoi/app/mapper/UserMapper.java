@@ -10,6 +10,9 @@ import org.mapstruct.*;
 public interface UserMapper {
     //MapStruct
     @Mapping(target = "username", source = "actualUsername")
+    @Mapping(target = "subscription.planType", source = "subscription.planType")
+    @Mapping(target = "subscription.endDate", source = "subscription.endDate")
+    @Mapping(target = "subscription.isActive", source = "subscription.isActive")
     UserResponse toUserResponse(User user);
 
     @Mapping(target = "roles", ignore = true)

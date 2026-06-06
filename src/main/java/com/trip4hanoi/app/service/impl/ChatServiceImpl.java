@@ -164,7 +164,9 @@ public class ChatServiceImpl implements ChatService {
             try {
                 notificationService.createNotification(NotificationRequest.builder()
                         .userId(room.getUser().getId())
+                        .title("Tin nhắn mới từ hỗ trợ")
                         .message("Nhân viên " + sender.getUsername() + " đã trả lời tin nhắn của bạn.")
+                        .type("CHAT")
                         .targetUrl("/#chat")
                         .status("UNREAD")
                         .build());
