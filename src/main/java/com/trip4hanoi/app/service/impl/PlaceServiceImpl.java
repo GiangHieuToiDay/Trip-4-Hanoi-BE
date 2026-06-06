@@ -370,6 +370,11 @@ public class PlaceServiceImpl implements PlaceService {
         return PageResponse.from(pageResult,responses);
     }
 
+    @Override
+    public List<String> getAllDistricts() {
+        return placeRepository.findDistinctDistricts();
+    }
+
 
     /**
      * Công thức Haversince

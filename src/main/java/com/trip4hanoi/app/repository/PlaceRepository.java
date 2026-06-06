@@ -31,4 +31,7 @@ public interface PlaceRepository extends JpaRepository<Place, Long> , JpaSpecifi
 
     @Query("SELECT c.name, AVG(p.ratingAvg) FROM Place p JOIN p.category c GROUP BY c.name")
     List<Object[]> getAverageRatingByCategory();
+
+    @Query("SELECT DISTINCT p.district FROM Place p WHERE p.district IS NOT NULL AND p.deleted = false ORDER BY p.district ASC")
+    List<String> findDistinctDistricts();
 }

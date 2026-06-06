@@ -189,5 +189,16 @@ public class PlaceController {
 
        return ResponseEntity.ok(response);
    }
+
+   @GetMapping("/districts")
+   public ResponseEntity<APIResponse<List<String>>> getDistricts() {
+       List<String> districts = placeService.getAllDistricts();
+       return ResponseEntity.ok(APIResponse.<List<String>>builder()
+               .status(HttpStatus.OK.value())
+               .code(1000)
+               .message("Successfully retrieved districts")
+               .data(districts)
+               .build());
+   }
 }
 

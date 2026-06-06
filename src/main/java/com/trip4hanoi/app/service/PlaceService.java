@@ -17,4 +17,5 @@ public interface PlaceService {
     void deletePlace(Long id);
     PageResponse<PlaceResponse> searchPlaces(PlaceFilterRequest request);
     PageResponse<PlaceResponse> getAllPlacesForAdmin(String keyword, Long categoryId, String district, String sort, int page, int size);
+    List<String> getAllDistricts();
 }
