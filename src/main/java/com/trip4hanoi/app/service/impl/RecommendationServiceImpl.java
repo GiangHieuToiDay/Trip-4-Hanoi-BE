@@ -43,7 +43,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         //  Lấy ID các địa điểm có sự kiện đang diễn ra (Tránh N+1)
         LocalDateTime now = LocalDateTime.now();
         Set<Long> placeIdsWithEvents = eventRepository.findAll().stream()
-                .filter(e -> !e.isDeleted() && !now.isBefore(e.getStartTime()) && !now.isAfter(e.getEndTime()))
+                .filter(e -> !e.isDeleted() && e.getPlace() != null && !now.isBefore(e.getStartTime()) && !now.isAfter(e.getEndTime()))
                 .map(e -> e.getPlace().getId())
                 .collect(Collectors.toSet());
 
@@ -101,7 +101,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         // Ưu tiên quán có nhiều view
-        score += (place.getViewCount() * 0.01);
+        if (place.getViewCount() != null) {
+            score += (place.getViewCount() * 0.01);
+        }
 
         // [MỚI] Ưu tiên cực cao nếu có Sự kiện đang diễn ra
         if (placeIdsWithEvents.contains(place.getId())) {
