@@ -56,7 +56,9 @@ public class PlaceServiceImpl implements PlaceService {
         if (categoryId != null) {
             places = placeRepository.findByCategoryIdAndDeletedFalse(categoryId);
         } else {
-            places = placeRepository.findAllByDeletedFalse();
+            // Sắp xếp mặc định theo viewCount và ratingAvg để hiển thị "Địa điểm phổ biến"
+            Sort sort = Sort.by(Sort.Direction.DESC, "viewCount", "ratingAvg");
+            places = placeRepository.findAllByDeletedFalse(sort);
         }
 
         Set<Long> preferredCategoryIds = getPreferredCategoryIds();
@@ -80,6 +82,10 @@ public class PlaceServiceImpl implements PlaceService {
         Place place = placeRepository.findById(id)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
+
+        // Tăng view count khi xem chi tiết
+        place.setViewCount(place.getViewCount() + 1);
+        placeRepository.save(place);
 
         PlaceDetailResponse res = placeMapper.toPlaceDetailResponse(place);
         enrichPlaceDetailResponse(res, place, getPreferredCategoryIds());
@@ -260,8 +266,10 @@ public class PlaceServiceImpl implements PlaceService {
     @Override
     public PageResponse<PlaceResponse> searchPlaces(PlaceFilterRequest request){
 
-        //Tạo Pageable
-        Pageable pageable = PageRequest.of(request.getPage()-1 ,request.getSize());
+        //Tạo Pageable có sắp xếp
+        Sort sort = Sort.by(Sort.Direction.DESC, 
+            StringUtils.hasText(request.getSortBy()) ? request.getSortBy() : "ratingAvg");
+        Pageable pageable = PageRequest.of(request.getPage()-1 ,request.getSize(), sort);
 
         //Lấy tất cả các bản ghi thỏa mãn bộ lọc (chưa tính khoảng cách)
         Specification<Place> spec = PlaceSpecification.filterPlaces(request);
