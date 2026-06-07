@@ -242,7 +242,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String htmlRegister = """
             <h2>Verify account</h2>
             <p>Click link below:</p>
-            <a href=\"""" + baseurl + "/api/auth/verify?token=" + uuid + """
+            <a href=\"""" + baseurl + "/verify?token=" + uuid + """
             \">
                 Verify
             </a>
