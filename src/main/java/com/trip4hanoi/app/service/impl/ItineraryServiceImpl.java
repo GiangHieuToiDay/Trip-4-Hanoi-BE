@@ -169,48 +169,55 @@ public class ItineraryServiceImpl implements ItineraryService {
                     // Xác định target category cho từng slot
                     List<String> slotTargets = getStrictTargets(currentSession, slotIndex);
                     
-                    // Filter candidates with diversity and budget constraints
+                    // Filter candidates with diversity and MANDATORY budget constraints
                     List<Place> candidates = allPossiblePlaces.stream()
                             .filter(pl -> !usedPlaces.contains(pl))
                             .filter(pl -> {
                                 if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
                                 String cat = pl.getCategory().getName();
                                 
-                                // --- Diversity Rules 2.0 (Trip-wide & Contextual) ---
-                                
-                                // 1. Dịch vụ đặc thù: Tối đa 1 lần/CHUYẾN ĐI (Spa, Cinema, Workshop)
+                                // 1. TUYỆT ĐỐI KHÔNG chọn nếu vượt ngân sách còn lại
+                                int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
+                                if ((long) price * numPeople > currentRemainingBudget) return false;
+
+                                // 2. Loại bỏ Homestay/Khách sạn khỏi tham quan
+                                if (cat.toLowerCase().contains("homestay") || cat.toLowerCase().contains("hostel") || cat.toLowerCase().contains("khách sạn")) return false;
+
+                                // 3. Kiểm tra tính hợp lý theo khung giờ (Session Appropriateness)
+                                if (!isAppropriateForSession(cat, currentSession)) return false;
+
+                                // 4. Diversity Rules 2.0
                                 if (List.of("Spa", "Cinema", "Workshop").stream().anyMatch(cat::contains) 
                                     && tripCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
 
-                                // 2. Điểm tham quan/tâm linh (Đền chùa, Di tích): 
-                                // Tối đa 1 lần/NGÀY và KHÔNG đi 2 ngày liên tiếp để tránh nhàm chán
                                 if (List.of("Đền chùa", "Di tích", "Lịch sử").stream().anyMatch(cat::contains)) {
                                     if (dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
                                     if (finalLastDayCategories.contains(cat)) return false; 
                                 }
 
-                                // 3. Cafe: Tối đa 1 lần/ngày
                                 if (cat.contains("Cafe") && dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
-
-                                // 4. Thiên nhiên (Hồ, Công viên): Tối đa 1 lần/ngày
-                                if (List.of("Hồ", "Công viên").stream().anyMatch(cat::contains) 
-                                    && dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
-
-                                // 5. Một category không xuất hiện quá 2 lần/ngày (trừ Đồ ăn)
+                                if (List.of("Hồ", "Công viên").stream().anyMatch(cat::contains) && dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
                                 if (!cat.contains("Restaurant") && dailyCategoryCounts.getOrDefault(cat, 0) >= 2) return false;
                                 
-                                boolean matchesTarget = slotTargets.stream().anyMatch(t -> cat.toLowerCase().contains(t.toLowerCase()) || t.toLowerCase().contains(cat.toLowerCase()));
-                                return matchesTarget;
+                                return slotTargets.stream().anyMatch(t -> cat.toLowerCase().contains(t.toLowerCase()) || t.toLowerCase().contains(cat.toLowerCase()));
                             })
                             .collect(Collectors.toList());
 
-                    // Fallback nếu không có target
+                    // Fallback thông minh: Ưu tiên tuyệt đối địa điểm 0đ nếu ngân sách hẹp
                     if (candidates.isEmpty()) {
                         candidates = allPossiblePlaces.stream()
                                 .filter(pl -> !usedPlaces.contains(pl))
                                 .filter(pl -> {
                                     if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
                                     String cat = pl.getCategory().getName();
+                                    int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
+                                    
+                                    if ((long) price * numPeople > currentRemainingBudget) return false;
+                                    if (currentRemainingBudget < (totalBudget * 0.1) && price > 0) return false;
+
+                                    if (cat.toLowerCase().contains("homestay") || cat.toLowerCase().contains("hostel")) return false;
+                                    if (!isAppropriateForSession(cat, currentSession)) return false;
+                                    
                                     return dailyCategoryCounts.getOrDefault(cat, 0) < 1 && tripCategoryCounts.getOrDefault(cat, 0) < 3;
                                 })
                                 .limit(20)
@@ -221,6 +228,7 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     LocalDate travelDate = (request.getStartDate() != null) ? request.getStartDate().plusDays(day -1) : LocalDate.now().plusDays(day-1);
                     
+                    // Scoring logic
                     List<PlaceScore> scoredPlaces = candidates.stream()
                             .map(pl -> {
                                 String plCatName = (pl.getCategory() != null) ? pl.getCategory().getName() : "";
@@ -230,14 +238,8 @@ public class ItineraryServiceImpl implements ItineraryService {
                                 int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
                                 double costForGroup = (double) price * numPeople;
                                 
-                                // Budget FIT Score
-                                double budgetFit;
-                                if (costForGroup > currentRemainingBudget) {
-                                    budgetFit = -10.0; // Penalty cực nặng để không bao giờ chọn nếu vượt ngân sách
-                                } else {
-                                    double targetPrice = dailyBudgetLimit / 8.0; 
-                                    budgetFit = 1.0 - Math.min(1.0, costForGroup / (targetPrice * 2 + 1));
-                                }
+                                // Budget FIT Score - Ưu tiên tiết kiệm (30%)
+                                double budgetFit = 1.0 - Math.min(1.0, costForGroup / (currentRemainingBudget + 1));
 
                                 double recBonus = recommendedIds.contains(pl.getId()) ? 1.0 : 0.0;
 
@@ -249,7 +251,8 @@ public class ItineraryServiceImpl implements ItineraryService {
                                     }
                                 }
 
-                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.6 * budgetFit + 0.2 * distanceScore + 0.1 * recBonus;
+                                // Trọng số mới: Sở thích (0.5), Budget (0.3), Khoảng cách (0.15), Bonus (0.05)
+                                double totalScore = 0.5 * prefMatch + 0.3 * budgetFit + 0.15 * distanceScore + 0.05 * recBonus;
 
                                 double eventBonus = 0.0;
                                 Event foundEvent = null;
@@ -269,7 +272,7 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     if (scoredPlaces.isEmpty()) break;
 
-                    // KHÔNG chọn ngẫu nhiên nếu vượt budget. Luôn chọn cái tốt nhất (ít âm nhất/rẻ nhất).
+                    // Tuyệt đối không chọn ngẫu nhiên nếu vượt budget.
                     PlaceScore chosenWrapper = scoredPlaces.get(0);
                     Place foundPlace = chosenWrapper.getPlace();
                     Event activeEvent = chosenWrapper.getActiveEvent();
@@ -334,6 +337,19 @@ public class ItineraryServiceImpl implements ItineraryService {
             default:
                 return List.of();
         }
+    }
+
+    private boolean isAppropriateForSession(String category, String session) {
+        String cat = category.toLowerCase();
+        if (session.equals("Morning")) {
+            // Sáng: Tuyệt đối không Cinema, Spa, Bar, Pub, Entertainment (vui chơi giải trí ban đêm)
+            if (cat.contains("cinema") || cat.contains("spa") || cat.contains("bar") || cat.contains("pub") || cat.contains("thuong mai") || cat.contains("giải trí")) return false;
+        }
+        if (session.equals("Evening")) {
+            // Tối: Tuyệt đối không Đền, Chùa, Di tích, Bảo tàng
+            if (cat.contains("đền") || cat.contains("chùa") || cat.contains("di tích") || cat.contains("bảo tàng") || cat.contains("lịch sử")) return false;
+        }
+        return true;
     }
 
 
