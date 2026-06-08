@@ -2,6 +2,7 @@ package com.trip4hanoi.app.service.impl;
 
 import com.trip4hanoi.app.dto.res.ChatResponse;
 import com.trip4hanoi.app.dto.res.PlaceResponse;
+import com.trip4hanoi.app.entity.Place;
 import com.trip4hanoi.app.repository.EventRepository;
 import com.trip4hanoi.app.repository.PlaceRepository;
 import com.trip4hanoi.app.repository.UserLocationHistoryRepository;
@@ -91,42 +92,45 @@ public class GeminiServiceImpl implements GeminiService {
         // Phân tích ý định sơ bộ để lấy dữ liệu phù hợp
         String lowerMsg = userMessage.toLowerCase();
         boolean needsHomestay = lowerMsg.contains("homestay") || lowerMsg.contains("nghỉ") || lowerMsg.contains("chỗ ở") || lowerMsg.contains("khách sạn");
-        boolean needsRomantic = lowerMsg.contains("người yêu") || lowerMsg.contains("hẹn hò") || lowerMsg.contains("lãng mạn");
+        boolean needsRomantic = lowerMsg.contains("người yêu") || lowerMsg.contains("hẹn hò") || lowerMsg.contains("lãng mạn") || lowerMsg.contains("vợ");
+        boolean needsFood = lowerMsg.contains("ăn") || lowerMsg.contains("đói") || lowerMsg.contains("nhà hàng") || lowerMsg.contains("quán");
 
         // Chạy song song các tác vụ lấy dữ liệu (Parallel Fetching)
         CompletableFuture<List<PlaceResponse>> recommendedPlacesFuture = CompletableFuture.supplyAsync(() -> {
             List<PlaceResponse> places = new ArrayList<>();
             
-            // 1. Lấy gợi ý cá nhân hóa (15 địa điểm)
-            List<?> rawList = recommendationService.getPersonalizedRecommendations(15);
+            // 1. Lấy gợi ý cá nhân hóa diện rộng (30 địa điểm)
+            List<?> rawList = recommendationService.getPersonalizedRecommendations(30);
             places.addAll(rawList.stream()
                     .map(item -> objectMapper.convertValue(item, PlaceResponse.class))
                     .collect(Collectors.toList()));
 
-            // 2. Nếu cần Homestay, chủ động lấy thêm 5 Homestay xịn
-            if (needsHomestay) {
-                placeRepository.findAllByDeletedFalse().stream()
-                    .filter(p -> p.getCategory() != null && p.getCategory().getName().equalsIgnoreCase("Homestay"))
-                    .limit(5)
-                    .forEach(p -> {
-                        PlaceResponse pr = PlaceResponse.builder()
-                                .id(p.getId())
-                                .name(p.getName())
-                                .district(p.getDistrict())
-                                .description(p.getDescription())
-                                .priceAvg(p.getPriceAvg())
-                                .isRecommended(true)
-                                .build();
-                        if (places.stream().noneMatch(existing -> existing.getId().equals(pr.getId()))) {
-                            places.add(pr);
-                        }
-                    });
-            }
-            
-            // 3. Nếu là cặp đôi, lấy thêm các chỗ chill/lãng mạn
-            if (needsRomantic) {
-                // Ưu tiên các category: Cafe, Nhà hàng, Hồ, Công viên
-                // (Logic này có thể mở rộng thêm filter cụ thể)
+            // 2. Chủ động bổ sung địa điểm theo mục tiêu (Top Districts: Hoàn Kiếm, Tây Hồ, Cầu Giấy)
+            if (places.size() < 40) {
+                List<Place> allPlaces = placeRepository.findAllByDeletedFalse();
+                
+                // Lấy thêm Homestay nếu cần
+                if (needsHomestay) {
+                    allPlaces.stream()
+                        .filter(p -> p.getCategory() != null && p.getCategory().getName().equalsIgnoreCase("Homestay"))
+                        .limit(5)
+                        .forEach(p -> addIfAbsent(places, p));
+                }
+
+                // Lấy thêm địa điểm "Sang chảnh/Chill" ở trung tâm nếu ngân sách lớn hoặc đi với người yêu
+                allPlaces.stream()
+                    .filter(p -> p.getDistrict() != null && (p.getDistrict().contains("Hoàn Kiếm") || p.getDistrict().contains("Tây Hồ")))
+                    .filter(p -> p.getRatingAvg() != null && p.getRatingAvg() >= 4.0)
+                    .limit(10)
+                    .forEach(p -> addIfAbsent(places, p));
+                    
+                // Lấy thêm địa điểm ăn uống nếu đang đói
+                if (needsFood) {
+                    allPlaces.stream()
+                        .filter(p -> p.getCategory() != null && (p.getCategory().getName().contains("Restaurant") || p.getCategory().getName().contains("Food")))
+                        .limit(5)
+                        .forEach(p -> addIfAbsent(places, p));
+                }
             }
 
             return places;
@@ -140,7 +144,7 @@ public class GeminiServiceImpl implements GeminiService {
                     .collect(Collectors.joining(", "));
             var topDistricts = locationHistoryRepository.findTopDistricts(userId, LocalDateTime.now().minusDays(15));
             
-            return String.format("User: %s, Gu: %s, Khu vực hay ở: %s. Thời gian hiện tại: %s, %s.",
+            return String.format("User: %s, Gu: %s, Khu vực quen thuộc: %s. Thời gian hiện tại: %s, %s.",
                     user != null ? user.getUsername() : "Khách",
                     prefs.isEmpty() ? "Tổng hợp" : prefs,
                     topDistricts.isEmpty() ? "Hà Nội" : String.join(", ", topDistricts),
@@ -159,31 +163,34 @@ public class GeminiServiceImpl implements GeminiService {
                 .map(e -> String.format("- Sự kiện: %s tại [ID:%d]. Mô tả: %s", e.getName(), e.getPlace().getId(), e.getDescription()))
                 .collect(Collectors.joining("\n"));
 
-        // Prompt Compression
+        // Prompt Compression & Enrichment
         String placesPrompt = recommendedPlaces.stream()
-                .map(p -> String.format("[%d]%s(%s):%s.Giá:%d.Gu:%b", 
-                        p.getId(), p.getName(), p.getDistrict(), p.getDescription(), p.getPriceAvg(), p.getIsRecommended()))
+                .map(p -> String.format("[%d]%s(%s)-%s:%s.Giá:%d", 
+                        p.getId(), p.getName(), p.getDistrict(), p.getCategoryName() != null ? p.getCategoryName() : "Khác",
+                        p.getDescription(), p.getPriceAvg()))
                 .collect(Collectors.joining("|"));
 
         String prompt = String.format(
-                "Hệ thống: Bạn là 'Local Buddy' - một người bạn bản địa Hà Nội am hiểu và thông minh. CHỈ TRẢ VỀ JSON KHÔNG CÓ MARKDOWN.\n" +
-                "Nhiệm vụ & Quy tắc cứng:\n" +
-                "1. PHÂN LOẠI Ý ĐỊNH:\n" +
-                "   - Nếu người dùng chào hỏi, tán gẫu hoặc hỏi chung chung: Đặt timeline là [] và trả lời thân thiện trong 'introduction'.\n" +
-                "   - Nếu người dùng yêu cầu lịch trình: Thực hiện lên lịch trình chi tiết trong 'timeline'.\n" +
-                "2. NHẬN THỨC THỜI GIAN THỰC: Bối cảnh thời gian hiện tại là %s. Nếu khách hỏi 'ngay bây giờ' đi đâu ăn gì, phải ưu tiên món ăn phù hợp (11h-13h: Ăn trưa, 18h-20h: Ăn tối).\n" +
-                "3. TUYỆT ĐỐI BẢO MẬT ID: Không bao giờ hiển thị các con số ID địa điểm (ví dụ: 'ID 1', '[1]', 'địa điểm 5') trong nội dung văn bản (introduction và summary). Người dùng không được thấy các ID này. Các ID chỉ dùng ngầm trong 'placeId' và 'suggestedPlaceIds'.\n" +
-                "4. LOGIC THỰC TẾ: Không xếp Đền/Chùa/Bảo tàng sau 18h. Không đi Cinema/Bar buổi sáng. Nếu đi cặp đôi, hãy gợi ý Homestay nếu muộn hoặc khách yêu cầu nghỉ ngơi.\n" +
-                "5. DỮ LIỆU: Sử dụng danh sách địa điểm khả dụng: %s.\n" +
-                "6. PERSONA: Ngôn ngữ GenZ Hà Nội (ông - tôi, nhé, chill, cháy phố...), thân thiện, ngắn gọn.\n" +
+                "Hệ thống: Bạn là 'Local Buddy' - Chuyên gia tư vấn trải nghiệm Hà Nội bậc thầy. CHỈ TRẢ VỀ JSON.\n" +
                 "Bối cảnh người dùng: %s.\n" +
-                "Sự kiện đang diễn ra: %s.\n" +
-                "Người dùng nói: \"%s\".\n" +
-                "Cấu trúc JSON bắt buộc: {introduction, timeline:[{time, activity, placeId, note, estimatedCost}], summary, suggestedPlaceIds:[]}",
-                currentTimeStr, placesPrompt, userContext, eventsContext, userMessage
+                "Danh sách địa điểm: %s.\n" +
+                "Nhiệm vụ: Lên lịch trình ĐẲNG CẤP, HỢP LÝ và TINH TẾ.\n" +
+                "Quy tắc 'Bậc thầy':\n" +
+                "1. TẦM NHÌN RỘNG: Không chỉ gợi ý địa điểm gần, hãy mạnh dạn đề xuất di chuyển giữa các khu vực (ví dụ từ ngoại thành vào Phố Cổ/Hồ Tây) nếu ngân sách cho phép và trải nghiệm đáng giá.\n" +
+                "2. KHẨU VỊ THEO NGÂN SÁCH: \n" +
+                "   - Ngân sách cao (trên 1tr): Phải có các trải nghiệm xịn như Rooftop, Fine Dining, Cinema sang trọng, Workshop gốm/vẽ, hoặc Homestay view đẹp.\n" +
+                "   - Ngân sách thấp: Ưu tiên Food tour vỉa hè, Công viên, Hồ, trà chanh chill.\n" +
+                "3. LOGIC THỜI GIAN THỰC: 11h-13h là ĂN TRƯA, 18h-20h là ĂN TỐI. Sau 18h KHÔNG đi Bảo tàng/Đền/Chùa.\n" +
+                "4. CHIỀU LÒNG KHÁCH: Nếu khách nói 'không muốn ăn món A', tuyệt đối không gợi ý lại món đó hoặc món tương tự rẻ tiền hơn. Phải nâng cấp hoặc đổi hẳn phong cách.\n" +
+                "5. PERSONA: Ngôn ngữ GenZ Hà Nội cực chill (ông-tôi, cháy phố, đỉnh nóc kịch trần...), trình bày đẹp, có 'Concept' rõ ràng trong 'introduction'.\n" +
+                "6. BẢO MẬT: TUYỆT ĐỐI KHÔNG hiện ID địa điểm trong văn bản.\n" +
+                "Người dùng: \"%s\".\n" +
+                "Sự kiện: %s.\n" +
+                "JSON: {introduction, timeline:[{time, activity, placeId, note, estimatedCost}], summary, suggestedPlaceIds:[]}",
+                userContext, placesPrompt, userMessage, eventsContext
         );
 
-        log.info("Data fetching & preparation took: {} ms", System.currentTimeMillis() - startTime);
+        log.info("Data fetching & Master Planner preparation took: {} ms", System.currentTimeMillis() - startTime);
 
         Map<String, Object> body = Map.of(
                 "contents", List.of(
@@ -257,6 +264,20 @@ public class GeminiServiceImpl implements GeminiService {
                     .introduction("Xin lỗi, tôi đang xử lý hơi chậm. Bạn thử lại nhé!")
                     .timeline(new ArrayList<>())
                     .build();
+        }
+    }
+
+    private void addIfAbsent(List<PlaceResponse> list, Place p) {
+        if (list.stream().noneMatch(item -> item.getId().equals(p.getId()))) {
+            list.add(PlaceResponse.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .district(p.getDistrict())
+                    .description(p.getDescription())
+                    .priceAvg(p.getPriceAvg())
+                    .categoryName(p.getCategory() != null ? p.getCategory().getName() : "Khác")
+                    .isRecommended(true)
+                    .build());
         }
     }
 }
