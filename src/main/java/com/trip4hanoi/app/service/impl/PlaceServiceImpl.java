@@ -78,13 +78,15 @@ public class PlaceServiceImpl implements PlaceService {
      * @return
      */
     @Override
+    @Transactional
     public PlaceDetailResponse getPlaceDetail(Long id, Double userLat, Double userLng) {
         Place place = placeRepository.findById(id)
                 .filter(p -> !p.isDeleted())
                 .orElseThrow(() -> new AppException(ErrorCode.PLACE_NOT_FOUND));
 
-        // Tăng view count khi xem chi tiết
-        place.setViewCount(place.getViewCount() + 1);
+        // Tăng view count khi xem chi tiết (Phòng hờ viewCount bị NULL trong DB)
+        int currentViewCount = (place.getViewCount() != null) ? place.getViewCount() : 0;
+        place.setViewCount(currentViewCount + 1);
         placeRepository.save(place);
 
         PlaceDetailResponse res = placeMapper.toPlaceDetailResponse(place);
@@ -412,8 +414,8 @@ public class PlaceServiceImpl implements PlaceService {
 
 
     private void enrichPlaceResponse(PlaceResponse dto, Place entity, Set<Long> preferredIds) {
-        //  Check Recommended
-        if (preferredIds.contains(entity.getCategory().getId())) {
+        //  Check Recommended (Defensive check for null Category)
+        if (entity.getCategory() != null && preferredIds.contains(entity.getCategory().getId())) {
             dto.setIsRecommended(true);
         }
 
@@ -422,8 +424,8 @@ public class PlaceServiceImpl implements PlaceService {
     }
 
     private void enrichPlaceDetailResponse(PlaceDetailResponse dto, Place entity, Set<Long> preferredIds) {
-        //  Check Recommended
-        if (preferredIds.contains(entity.getCategory().getId())) {
+        //  Check Recommended (Defensive check for null Category)
+        if (entity.getCategory() != null && preferredIds.contains(entity.getCategory().getId())) {
             dto.setIsRecommended(true);
         }
 
@@ -461,6 +463,7 @@ public class PlaceServiceImpl implements PlaceService {
             return Collections.emptySet();
         }
         return userPreferenceRepository.findByUserId(currentUserId).stream()
+                .filter(up -> up.getCategory() != null)
                 .map(up -> up.getCategory().getId())
                 .collect(Collectors.toSet());
     }
