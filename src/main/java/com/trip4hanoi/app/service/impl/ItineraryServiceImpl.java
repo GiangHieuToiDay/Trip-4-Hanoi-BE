@@ -221,7 +221,6 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     LocalDate travelDate = (request.getStartDate() != null) ? request.getStartDate().plusDays(day -1) : LocalDate.now().plusDays(day-1);
                     
-                    // Scoring logic
                     List<PlaceScore> scoredPlaces = candidates.stream()
                             .map(pl -> {
                                 String plCatName = (pl.getCategory() != null) ? pl.getCategory().getName() : "";
@@ -234,7 +233,7 @@ public class ItineraryServiceImpl implements ItineraryService {
                                 // Budget FIT Score
                                 double budgetFit;
                                 if (costForGroup > currentRemainingBudget) {
-                                    budgetFit = -3.0; // Penalty cực nặng
+                                    budgetFit = -10.0; // Penalty cực nặng để không bao giờ chọn nếu vượt ngân sách
                                 } else {
                                     double targetPrice = dailyBudgetLimit / 8.0; 
                                     budgetFit = 1.0 - Math.min(1.0, costForGroup / (targetPrice * 2 + 1));
@@ -250,7 +249,7 @@ public class ItineraryServiceImpl implements ItineraryService {
                                     }
                                 }
 
-                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.5 * budgetFit + 0.3 * distanceScore + 0.1 * recBonus;
+                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.6 * budgetFit + 0.2 * distanceScore + 0.1 * recBonus;
 
                                 double eventBonus = 0.0;
                                 Event foundEvent = null;
@@ -270,7 +269,8 @@ public class ItineraryServiceImpl implements ItineraryService {
 
                     if (scoredPlaces.isEmpty()) break;
 
-                    PlaceScore chosenWrapper = (scoredPlaces.get(0).getScore() > 0) ? scoredPlaces.get(0) : scoredPlaces.get(random.nextInt(scoredPlaces.size()));
+                    // KHÔNG chọn ngẫu nhiên nếu vượt budget. Luôn chọn cái tốt nhất (ít âm nhất/rẻ nhất).
+                    PlaceScore chosenWrapper = scoredPlaces.get(0);
                     Place foundPlace = chosenWrapper.getPlace();
                     Event activeEvent = chosenWrapper.getActiveEvent();
 
