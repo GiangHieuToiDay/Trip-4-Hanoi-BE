@@ -115,16 +115,16 @@ public class ItineraryServiceImpl implements ItineraryService {
 
         int numDays = request.getDays() != null ? request.getDays() : 1;
         int numPeople = request.getNumberOfPeople() != null ? request.getNumberOfPeople() : 1;
-        int totalBudget = request.getBudget() != null ? request.getBudget() : 1000000;
+        long totalBudget = request.getBudget() != null ? request.getBudget() : 1000000;
         
-        double dailyBudget = (double) totalBudget / numDays;
-        double budgetPerPersonPerDay = dailyBudget / numPeople;
+        double remainingTotalBudget = totalBudget;
+        double dailyBudgetLimit = (double) totalBudget / numDays;
 
         //Chỉ lấy những địa điểm chưa bị xóa
         List<Place> allPossiblePlaces = placeRepository.findAllByDeletedFalse();
 
-        // Gợi ý thông minh - Fix ClassCastException from Cache
-        List<?> rawRecommendations = recommendationService.getPersonalizedRecommendations(50);
+        // Gợi ý thông minh
+        List<?> rawRecommendations = recommendationService.getPersonalizedRecommendations(100);
         List<PlaceResponse> recommendedPlaces = rawRecommendations.stream()
                 .map(item -> objectMapper.convertValue(item, PlaceResponse.class))
                 .collect(Collectors.toList());
@@ -141,96 +141,123 @@ public class ItineraryServiceImpl implements ItineraryService {
         Random random = new Random();
 
         String[] sessionNames = {"Morning", "Noon", "Afternoon", "Evening"};
+        
+        // Theo dõi toàn bộ chuyến đi
+        Map<String, Integer> tripCategoryCounts = new HashMap<>();
+        Set<String> lastDayCategories = new HashSet<>();
 
         for (int day = 1; day <= numDays; day++) {
             int orderInDay = 1;
-            Double lastLat = (day == 1) ? userLat : null;
-            Double lastLon = (day == 1) ? userLon : null;
+            Double lastLat = (day == 1) ? userLat : (itineraryPlaces.isEmpty() ? null : itineraryPlaces.get(itineraryPlaces.size()-1).getPlace().getLatitude());
+            Double lastLon = (day == 1) ? userLon : (itineraryPlaces.isEmpty() ? null : itineraryPlaces.get(itineraryPlaces.size()-1).getPlace().getLongitude());
+            
+            Map<String, Integer> dailyCategoryCounts = new HashMap<>();
+            Set<String> currentDayCategories = new HashSet<>();
 
             for (String session : sessionNames) {
-                double sessionBudgetRatio = session.equals("Evening") ? 0.35 : 0.216;
-                double currentSessionBudget = dailyBudget * sessionBudgetRatio;
-                double budgetPerPlaceTarget = currentSessionBudget / (numPeople * 3.0);
-
-                // Ép buộc ít nhất 2 địa điểm mỗi buổi để đảm bảo có cả Ăn và Chơi
-                int placesPerSession = (numPeople >= 3) ? 3 : 2;
-
-                String lastCategoryName = "";
-                Map<String, Integer> sessionCategoryCounts = new HashMap<>();
+                // Mỗi buổi tối đa 2 địa điểm để đảm bảo sức khỏe và ngân sách
+                int placesPerSession = 2;
 
                 for (int p = 0; p < placesPerSession; p++) {
-                    final String finalLastCategory = lastCategoryName;
-                    final int slotIndex = p;
                     final String currentSession = session;
+                    final int slotIndex = p;
                     final Double currentLastLat = lastLat;
                     final Double currentLastLon = lastLon;
+                    final Set<String> finalLastDayCategories = lastDayCategories;
+                    final double currentRemainingBudget = remainingTotalBudget;
                     
                     // Xác định target category cho từng slot
                     List<String> slotTargets = getStrictTargets(currentSession, slotIndex);
                     
-                    // Filter
+                    // Filter candidates with diversity and budget constraints
                     List<Place> candidates = allPossiblePlaces.stream()
                             .filter(pl -> !usedPlaces.contains(pl))
                             .filter(pl -> {
                                 if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
-                                String cat = pl.getCategory().getName().toLowerCase();
-                                boolean matchesTarget = slotTargets.stream().anyMatch(t -> cat.contains(t.toLowerCase()) || t.toLowerCase().contains(cat));
-                                int maxPerSession = 1; // Mỗi loại chỉ xuất hiện 1 lần/buổi
-                                return matchesTarget && sessionCategoryCounts.getOrDefault(pl.getCategory().getName(), 0) < maxPerSession;
+                                String cat = pl.getCategory().getName();
+                                
+                                // --- Diversity Rules 2.0 (Trip-wide & Contextual) ---
+                                
+                                // 1. Dịch vụ đặc thù: Tối đa 1 lần/CHUYẾN ĐI (Spa, Cinema, Workshop)
+                                if (List.of("Spa", "Cinema", "Workshop").stream().anyMatch(cat::contains) 
+                                    && tripCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
+
+                                // 2. Điểm tham quan/tâm linh (Đền chùa, Di tích): 
+                                // Tối đa 1 lần/NGÀY và KHÔNG đi 2 ngày liên tiếp để tránh nhàm chán
+                                if (List.of("Đền chùa", "Di tích", "Lịch sử").stream().anyMatch(cat::contains)) {
+                                    if (dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
+                                    if (finalLastDayCategories.contains(cat)) return false; 
+                                }
+
+                                // 3. Cafe: Tối đa 1 lần/ngày
+                                if (cat.contains("Cafe") && dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
+
+                                // 4. Thiên nhiên (Hồ, Công viên): Tối đa 1 lần/ngày
+                                if (List.of("Hồ", "Công viên").stream().anyMatch(cat::contains) 
+                                    && dailyCategoryCounts.getOrDefault(cat, 0) >= 1) return false;
+
+                                // 5. Một category không xuất hiện quá 2 lần/ngày (trừ Đồ ăn)
+                                if (!cat.contains("Restaurant") && dailyCategoryCounts.getOrDefault(cat, 0) >= 2) return false;
+                                
+                                boolean matchesTarget = slotTargets.stream().anyMatch(t -> cat.toLowerCase().contains(t.toLowerCase()) || t.toLowerCase().contains(cat.toLowerCase()));
+                                return matchesTarget;
                             })
                             .collect(Collectors.toList());
 
-                    // Fallback nếu không có target (nhưng vẫn loại trừ category vừa đi)
+                    // Fallback nếu không có target
                     if (candidates.isEmpty()) {
                         candidates = allPossiblePlaces.stream()
                                 .filter(pl -> !usedPlaces.contains(pl))
                                 .filter(pl -> {
                                     if (pl.getCategory() == null || pl.getCategory().getName() == null) return false;
-                                    return !pl.getCategory().getName().equalsIgnoreCase(finalLastCategory);
+                                    String cat = pl.getCategory().getName();
+                                    return dailyCategoryCounts.getOrDefault(cat, 0) < 1 && tripCategoryCounts.getOrDefault(cat, 0) < 3;
                                 })
+                                .limit(20)
                                 .collect(Collectors.toList());
                     }
 
                     if (candidates.isEmpty()) break;
 
-                    // Xác định ngày hiện tại của lịch trình
                     LocalDate travelDate = (request.getStartDate() != null) ? request.getStartDate().plusDays(day -1) : LocalDate.now().plusDays(day-1);
-                    // Scoring
+                    
+                    // Scoring logic
                     List<PlaceScore> scoredPlaces = candidates.stream()
                             .map(pl -> {
                                 String plCatName = (pl.getCategory() != null) ? pl.getCategory().getName() : "";
                                 double prefMatch = preferredCategoryNames.stream().anyMatch(c -> c.equalsIgnoreCase(plCatName)) ? 1.0 : 0.0;
                                 double ratingScore = (pl.getRatingAvg() != null ? pl.getRatingAvg() : 0.0) / 5.0;
-                                int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
-                                double budgetFit = 1.0 - Math.min(1.0, Math.abs(price - budgetPerPlaceTarget) / (budgetPerPlaceTarget + 1));
                                 
-                                // Ưu tiên gợi ý thông minh
+                                int price = pl.getPriceAvg() != null ? pl.getPriceAvg() : 0;
+                                double costForGroup = (double) price * numPeople;
+                                
+                                // Budget FIT Score
+                                double budgetFit;
+                                if (costForGroup > currentRemainingBudget) {
+                                    budgetFit = -3.0; // Penalty cực nặng
+                                } else {
+                                    double targetPrice = dailyBudgetLimit / 8.0; 
+                                    budgetFit = 1.0 - Math.min(1.0, costForGroup / (targetPrice * 2 + 1));
+                                }
+
                                 double recBonus = recommendedIds.contains(pl.getId()) ? 1.0 : 0.0;
 
-                                // Ưu tiên theo khoảng cách
                                 double distanceScore = 0.0;
                                 if (currentLastLat != null && currentLastLon != null) {
                                     Double dist = calculateDistance(currentLastLat, currentLastLon, pl.getLatitude(), pl.getLongitude());
                                     if (dist != null) {
-                                        distanceScore = 1.0 / (1.0 + dist);
+                                        distanceScore = 1.0 / (1.0 + dist/2.0);
                                     }
                                 }
 
-                                // Tăng trọng số khoảng cách để tránh đi lòng vòng
-                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.1 * budgetFit + 0.5 * distanceScore + 0.5 * recBonus;
+                                double totalScore = 0.2 * prefMatch + 0.1 * ratingScore + 0.5 * budgetFit + 0.3 * distanceScore + 0.1 * recBonus;
 
-                                log.info("Place: {} | Total: {} | DistScore: {} | Rec: {}", pl.getName(), totalScore, distanceScore, recBonus > 0);
-
-                                //Kiểm tra Event Bonus
                                 double eventBonus = 0.0;
                                 Event foundEvent = null;
                                 List<Event>  events = eventRepository.findByPlaceId(pl.getId());
                                 for (Event ev : events) {
-                                    // Kiểm tra xem travelDate có nằm trong khoảng diễn ra event không
-                                    if(!travelDate.isBefore(ev.getStartTime().toLocalDate()) &&
-                                    !travelDate.isAfter(ev.getEndTime().toLocalDate())) {
-                                        // Bonus điểm sự kiện nhưng có tính đến khoảng cách (xa quá thì giảm ham muốn)
-                                        eventBonus = (currentLastLat != null) ? 1.0 / (1.0 + (calculateDistance(currentLastLat, currentLastLon, pl.getLatitude(), pl.getLongitude()) / 5.0)) : 1.0;
+                                    if(!travelDate.isBefore(ev.getStartTime().toLocalDate()) && !travelDate.isAfter(ev.getEndTime().toLocalDate())) {
+                                        eventBonus = 0.5;
                                         foundEvent = ev;
                                         break;
                                     }
@@ -238,24 +265,26 @@ public class ItineraryServiceImpl implements ItineraryService {
                                 return new PlaceScore(pl, totalScore + eventBonus, foundEvent);
                             })
                             .sorted(Comparator.comparingDouble(PlaceScore::getScore).reversed())
-                            .limit(3)
+                            .limit(5)
                             .collect(Collectors.toList());
 
-                    //chọn ngẫu nhiên
-                    PlaceScore chosenWrapper = scoredPlaces.get(random.nextInt(scoredPlaces.size()));
-                    Place foundPlace = chosenWrapper.getPlace();
-                    Event activeEvent = chosenWrapper.getActiveEvent();// lấy event
+                    if (scoredPlaces.isEmpty()) break;
 
-                    
+                    PlaceScore chosenWrapper = (scoredPlaces.get(0).getScore() > 0) ? scoredPlaces.get(0) : scoredPlaces.get(random.nextInt(scoredPlaces.size()));
+                    Place foundPlace = chosenWrapper.getPlace();
+                    Event activeEvent = chosenWrapper.getActiveEvent();
+
                     usedPlaces.add(foundPlace);
                     lastLat = foundPlace.getLatitude();
                     lastLon = foundPlace.getLongitude();
 
                     String chosenCat = foundPlace.getCategory().getName();
-                    lastCategoryName = chosenCat;
-                    sessionCategoryCounts.put(chosenCat, sessionCategoryCounts.getOrDefault(chosenCat, 0) + 1);
+                    dailyCategoryCounts.put(chosenCat, dailyCategoryCounts.getOrDefault(chosenCat, 0) + 1);
+                    tripCategoryCounts.put(chosenCat, tripCategoryCounts.getOrDefault(chosenCat, 0) + 1);
+                    currentDayCategories.add(chosenCat);
                     
                     int totalPlaceCost = (foundPlace.getPriceAvg() != null ? foundPlace.getPriceAvg() : 0) * numPeople;
+                    remainingTotalBudget -= totalPlaceCost;
 
                     ItineraryPlace itineraryPlace = ItineraryPlace.builder()
                             .itinerary(itinerary)
@@ -269,6 +298,7 @@ public class ItineraryServiceImpl implements ItineraryService {
                     itineraryPlaces.add(itineraryPlace);
                 }
             }
+            lastDayCategories = currentDayCategories;
         }
 
         itinerary.setItineraryPlaces(itineraryPlaces);
