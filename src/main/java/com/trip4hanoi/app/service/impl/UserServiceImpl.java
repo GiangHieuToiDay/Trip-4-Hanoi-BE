@@ -4,6 +4,8 @@ package com.trip4hanoi.app.service.impl;
 import com.trip4hanoi.app.common.AuthProvider;
 import com.trip4hanoi.app.common.UserStatus;
 import com.trip4hanoi.app.dto.req.ChangePasswordRequest;
+import com.trip4hanoi.app.dto.req.ForgotPasswordRequest;
+import com.trip4hanoi.app.dto.req.ResetPasswordRequest;
 import com.trip4hanoi.app.dto.req.UserCreateRequest;
 import com.trip4hanoi.app.dto.req.UserUpdateRequest;
 import com.trip4hanoi.app.dto.res.PageResponse;
@@ -293,6 +295,53 @@ public class UserServiceImpl implements UserService {
         if(userRepository.existsByUsername(username)){
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+    }
+
+    @Override
+    @Transactional
+    public void sendForgotPasswordEmail(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new Random().nextInt(999999));
+
+        String htmlContent = """
+                <h2>Reset your password</h2>
+                <p>Your OTP for password reset is: <b>""" + otp + """
+                </b></p>
+                <p>This OTP will expire in 15 minutes.</p>
+                """;
+
+        mailService.sendMail(user.getEmail(), "Reset Password OTP", htmlContent);
+
+        user.setVerificationCode(otp);
+        user.setVerificationExpiredAt(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+        
+        log.info("Sent forgot password OTP to user {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByVerificationCode(request.getToken());
+        
+        if (user == null || user.getVerificationExpiredAt() == null 
+                || user.getVerificationExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS); // Hoặc TOKEN_EXPIRED nếu muốn chi tiết
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setVerificationCode(null);
+        user.setVerificationExpiredAt(null);
+        
+        userRepository.save(user);
+        
+        // Thu hồi mọi token cũ để yêu cầu đăng nhập lại bằng mật khẩu mới
+        revokeAllUserTokens(user.getEmail());
+        
+        log.info("User {} reset their password successfully using OTP.", user.getEmail());
     }
 
     private User getUser(long id){

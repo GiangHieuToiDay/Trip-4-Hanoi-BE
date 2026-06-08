@@ -2,6 +2,8 @@ package com.trip4hanoi.app.service;
 
 
 import com.trip4hanoi.app.dto.req.ChangePasswordRequest;
+import com.trip4hanoi.app.dto.req.ForgotPasswordRequest;
+import com.trip4hanoi.app.dto.req.ResetPasswordRequest;
 import com.trip4hanoi.app.dto.req.UserCreateRequest;
 import com.trip4hanoi.app.dto.req.UserUpdateRequest;
 import com.trip4hanoi.app.dto.res.PageResponse;
@@ -23,4 +25,8 @@ public interface UserService {
     void deleteUser(Long id);
     UserResponse getMyInfo();
     void changeMyPassword(ChangePasswordRequest request);
+
+    void sendForgotPasswordEmail(ForgotPasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 }
