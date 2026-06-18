@@ -114,10 +114,15 @@ public class SecurityConfig {
 //                "http://127.0.0.1:5500"
 //        ));
         // Cho phép tất cả các nguồn để thuận tiện test từ file HTML local
-        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+//        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://trip4hanoi.online",
+                "http://localhost:3000"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
