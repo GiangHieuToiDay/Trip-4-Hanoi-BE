@@ -272,10 +272,9 @@ public class DashboardServiceImpl implements DashboardService {
         String chatData = messages.stream().limit(20).collect(Collectors.joining(" | "));
         try {
             log.info("Requesting AI keyword analysis for dashboard...");
-            // Thêm hướng dẫn trả về ngắn gọn để AI phản hồi nhanh nhất có thể
-            var response = geminiService.chatWithAI("List 5 hot topics from this chat data, comma separated, Vietnamese, very brief: " + chatData, 0L);
-            String aiText = response.getIntroduction();
-            if (aiText == null || aiText.isEmpty()) throw new RuntimeException("AI returned empty response");
+            // Sử dụng simpleChat để không phải chạy logic lập kế hoạch phức tạp
+            String aiText = geminiService.simpleChat("List 5 hot topics from this chat data, comma separated, Vietnamese, very brief: " + chatData);
+            if (aiText == null || aiText.trim().isEmpty()) throw new RuntimeException("AI returned empty response");
             
             return Arrays.stream(aiText.split(","))
                     .map(String::trim)

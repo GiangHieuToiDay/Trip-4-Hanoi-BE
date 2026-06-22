@@ -323,4 +323,60 @@ public class GeminiServiceImpl implements GeminiService {
                     .build());
         }
     }
+
+    @Override
+    public String simpleChat(String prompt) {
+        Map<String, Object> body = Map.of(
+                "contents", List.of(
+                        Map.of("parts", List.of(
+                                Map.of("text", prompt)
+                        ))
+                )
+        );
+
+        try {
+            Map<?, ?> response = Mono.defer(() -> {
+                String activeKey = getCurrentKey();
+                String finalUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + activeKey;
+                
+                return geminiWebClient.post()
+                        .uri(finalUrl)
+                        .bodyValue(body)
+                        .retrieve()
+                        .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> 
+                            clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                                log.error(">>> Gemini API Error Body: {}", errorBody);
+                                if (clientResponse.statusCode().value() == 429) {
+                                    rotateKey();
+                                }
+                                return clientResponse.createException();
+                            })
+                        )
+                        .bodyToMono(Map.class);
+            })
+            .retryWhen(reactor.util.retry.Retry.backoff(apiKeys.size() * 2L, Duration.ofSeconds(1))
+                    .filter(throwable -> 
+                        throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests ||
+                        throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException.ServiceUnavailable
+                    )
+            )
+            .block(Duration.ofSeconds(10));
+
+            if (response == null || !response.containsKey("candidates")) {
+                return "";
+            }
+
+            List<?> candidates = (List<?>) response.get("candidates");
+            if (candidates.isEmpty()) return "";
+            Map<?, ?> firstCandidate = (Map<?, ?>) candidates.get(0);
+            Map<?, ?> content = (Map<?, ?>) firstCandidate.get("content");
+            List<?> parts = (List<?>) content.get("parts");
+            Map<?, ?> firstPart = (Map<?, ?>) parts.get(0);
+            return (String) firstPart.get("text");
+
+        } catch (Exception e) {
+            log.error(">>> simpleChat ERROR: ", e);
+            return "";
+        }
+    }
 }
